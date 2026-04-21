@@ -4,6 +4,15 @@ import { useEffect, useState } from 'react'
 import { useParams } from 'next/navigation'
 import { getSupabase, type Request } from '@/lib/supabase'
 
+interface Quote {
+  id: string
+  supplier_name: string
+  price: number
+  condition: string
+  notes: string
+  created_at: string
+}
+
 export default function SupplierQuotePage() {
   const { id } = useParams<{ id: string }>()
   const [request, setRequest] = useState<Request | null>(null)
@@ -16,8 +25,10 @@ export default function SupplierQuotePage() {
   const [condition, setCondition] = useState('Used')
   const [notes, setNotes] = useState('')
   const [submitting, setSubmitting] = useState(false)
-  const [submitted, setSubmitted] = useState(false)
   const [submitError, setSubmitError] = useState<string | null>(null)
+
+  // Submitted quote state
+  const [submittedQuote, setSubmittedQuote] = useState<Quote | null>(null)
 
   useEffect(() => {
     async function fetchRequest() {
@@ -28,6 +39,19 @@ export default function SupplierQuotePage() {
         .single()
       if (error) setError('This quote link is invalid or has expired.')
       else setRequest(data)
+
+      const storedName = localStorage.getItem(`quote_supplier_${id}`)
+      if (storedName) {
+        setSupplierName(storedName)
+        const { data: quote } = await getSupabase()
+          .from('quotes')
+          .select('*')
+          .eq('request_id', id)
+          .eq('supplier_name', storedName)
+          .single()
+        if (quote) setSubmittedQuote(quote)
+      }
+
       setLoading(false)
     }
     fetchRequest()
@@ -37,17 +61,50 @@ export default function SupplierQuotePage() {
     e.preventDefault()
     setSubmitting(true)
     setSubmitError(null)
-    const { error } = await getSupabase().from('quotes').insert({
-      request_id: id,
-      supplier_name: supplierName,
-      price: parseFloat(price),
-      condition,
-      notes,
-    })
+
+    if (!id) {
+      setSubmitError('Error: Request ID not loaded. Please reload the page.')
+      setSubmitting(false)
+      return
+    }
+
+    const { data: existingQuote, error: checkError } = await getSupabase()
+      .from('quotes')
+      .select('*')
+      .eq('request_id', id)
+      .eq('supplier_name', supplierName)
+      .single()
+
+    if (checkError && checkError.code !== 'PGRST116') {
+      setSubmitError(checkError.message)
+      setSubmitting(false)
+      return
+    }
+
+    if (existingQuote) {
+      setSubmittedQuote(existingQuote)
+      localStorage.setItem(`quote_supplier_${id}`, supplierName)
+      setSubmitting(false)
+      return
+    }
+
+    const { data: newQuote, error } = await getSupabase()
+      .from('quotes')
+      .insert({
+        request_id: id,
+        supplier_name: supplierName,
+        price: parseFloat(price),
+        condition,
+        notes,
+      })
+      .select('*')
+      .single()
+
     if (error) {
       setSubmitError(error.message)
-    } else {
-      setSubmitted(true)
+    } else if (newQuote) {
+      setSubmittedQuote(newQuote)
+      localStorage.setItem(`quote_supplier_${id}`, supplierName)
     }
     setSubmitting(false)
   }
@@ -84,18 +141,67 @@ export default function SupplierQuotePage() {
     )
   }
 
-  if (submitted) {
+  if (submittedQuote) {
     return (
-      <div className="min-h-screen bg-gray-100 flex items-center justify-center px-4">
-        <div className="bg-white rounded-lg border border-gray-200 p-8 max-w-md w-full text-center">
-          <div className="w-12 h-12 rounded-full bg-green-100 flex items-center justify-center mx-auto mb-4">
-            <svg className="w-6 h-6 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-            </svg>
+      <div className="min-h-screen bg-gray-100">
+        <header style={{ backgroundColor: '#d32f2f' }} className="text-white px-4 py-4 shadow">
+          <div className="max-w-lg mx-auto">
+            <h1 className="text-lg font-bold">Quote Submitted</h1>
           </div>
-          <h2 className="font-semibold text-gray-800 mb-1">Quote Submitted!</h2>
-          <p className="text-sm text-gray-500">Thank you. Your quote has been received.</p>
-        </div>
+        </header>
+
+        <main className="max-w-lg mx-auto px-4 py-8">
+          <div className="bg-white rounded-lg border border-gray-200 p-5 mb-6 shadow-sm text-center">
+            <div className="w-12 h-12 rounded-full bg-green-100 flex items-center justify-center mx-auto mb-4">
+              <svg className="w-6 h-6 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+              </svg>
+            </div>
+            <h2 className="font-semibold text-gray-800 mb-1">Quote Submitted!</h2>
+            <p className="text-sm text-gray-500">Thank you. Your quote has been received.</p>
+          </div>
+
+          <div className="bg-white rounded-lg border border-gray-200 p-5 shadow-sm">
+            <h3 className="text-base font-semibold text-gray-800 mb-4">Your Quote</h3>
+            <div className="space-y-4">
+              <div>
+                <label className="block text-xs text-gray-400 uppercase tracking-wide font-medium mb-1">
+                  Your Name / Company
+                </label>
+                <p className="text-sm text-gray-900">{submittedQuote.supplier_name}</p>
+              </div>
+
+              <div>
+                <label className="block text-xs text-gray-400 uppercase tracking-wide font-medium mb-1">
+                  Price (AUD)
+                </label>
+                <p className="text-sm text-gray-900">${submittedQuote.price.toFixed(2)}</p>
+              </div>
+
+              <div>
+                <label className="block text-xs text-gray-400 uppercase tracking-wide font-medium mb-1">
+                  Condition
+                </label>
+                <p className="text-sm text-gray-900">{submittedQuote.condition}</p>
+              </div>
+
+              {submittedQuote.notes && (
+                <div>
+                  <label className="block text-xs text-gray-400 uppercase tracking-wide font-medium mb-1">
+                    Notes
+                  </label>
+                  <p className="text-sm text-gray-900 whitespace-pre-wrap">{submittedQuote.notes}</p>
+                </div>
+              )}
+
+              <div className="pt-2 border-t border-gray-200">
+                <p className="text-xs text-gray-400">
+                  Submitted on {new Date(submittedQuote.created_at).toLocaleDateString()}
+                </p>
+              </div>
+            </div>
+          </div>
+        </main>
       </div>
     )
   }
