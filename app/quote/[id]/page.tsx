@@ -101,7 +101,8 @@ export default function SupplierQuotePage() {
       .single()
 
     if (error) {
-      setSubmitError(error.message)
+      const isDuplicateError = error.message?.includes('unique')
+      setSubmitError(isDuplicateError ? 'A quote from this company has already been submitted.' : error.message)
     } else if (newQuote) {
       setSubmittedQuote(newQuote)
       localStorage.setItem(`quote_supplier_${id}`, supplierName)
