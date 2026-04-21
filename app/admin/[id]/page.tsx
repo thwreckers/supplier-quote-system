@@ -15,16 +15,20 @@ export default function AdminRequestDetail() {
   const [togglingStatus, setTogglingStatus] = useState(false)
   const [generatingToken, setGeneratingToken] = useState(false)
 
+  const [tokenCount, setTokenCount] = useState(0)
+
   useEffect(() => {
     async function fetchData() {
       const db = getSupabase()
-      const [{ data: req, error: reqErr }, { data: qs, error: qErr }] = await Promise.all([
+      const [{ data: req, error: reqErr }, { data: qs, error: qErr }, { count: tCount }] = await Promise.all([
         db.from('requests').select('*').eq('id', id).single(),
         db.from('quotes').select('*').eq('request_id', id).order('created_at', { ascending: true }),
+        db.from('tokens').select('*', { count: 'exact', head: true }).eq('request_id', id),
       ])
       if (reqErr) setError(reqErr.message)
       else setRequest(req)
       if (!qErr) setQuotes(qs || [])
+      setTokenCount(tCount || 0)
       setLoading(false)
     }
     fetchData()
@@ -141,6 +145,27 @@ export default function AdminRequestDetail() {
               </button>
             </div>
           </div>
+        </div>
+
+        {/* Response tracking */}
+        <div className="bg-white rounded-lg border border-gray-200 p-4 mb-6 shadow-sm">
+          <div className="grid grid-cols-2 gap-4 text-center">
+            <div>
+              <p className="text-sm text-gray-600">Invitations Sent</p>
+              <p className="text-2xl font-bold text-gray-900">{tokenCount}</p>
+            </div>
+            <div>
+              <p className="text-sm text-gray-600">Responses Received</p>
+              <p className="text-2xl font-bold text-green-600">{quotes.length}</p>
+            </div>
+          </div>
+          {tokenCount > 0 && (
+            <div className="mt-3 pt-3 border-t border-gray-200">
+              <p className="text-xs text-gray-500">
+                Response rate: {Math.round((quotes.length / tokenCount) * 100)}%
+              </p>
+            </div>
+          )}
         </div>
 
         {/* Quotes */}
