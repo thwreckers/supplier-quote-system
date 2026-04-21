@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { useParams } from 'next/navigation'
+import { useParams, useSearchParams } from 'next/navigation'
 import { getSupabase, type Request } from '@/lib/supabase'
 
 interface Quote {
@@ -15,6 +15,9 @@ interface Quote {
 
 export default function SupplierQuotePage() {
   const { id } = useParams<{ id: string }>()
+  const searchParams = useSearchParams()
+  const token = searchParams.get('token')
+
   const [request, setRequest] = useState<Request | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -32,63 +35,56 @@ export default function SupplierQuotePage() {
 
   useEffect(() => {
     async function fetchRequest() {
-      const { data, error } = await getSupabase()
+      if (!token) {
+        setError('This quote link is invalid. Missing token.')
+        setLoading(false)
+        return
+      }
+
+      const { data: tokenData, error: tokenError } = await getSupabase()
+        .from('tokens')
+        .select('*')
+        .eq('token', token)
+        .single()
+
+      if (tokenError || !tokenData) {
+        setError('This quote link is invalid or has expired.')
+        setLoading(false)
+        return
+      }
+
+      if (tokenData.used) {
+        setError('This quote link has already been used.')
+        setLoading(false)
+        return
+      }
+
+      const { data: req, error: reqError } = await getSupabase()
         .from('requests')
         .select('*')
         .eq('id', id)
         .single()
-      if (error) setError('This quote link is invalid or has expired.')
-      else setRequest(data)
 
-      const storedName = localStorage.getItem(`quote_supplier_${id}`)
-      if (storedName) {
-        setSupplierName(storedName)
-        const { data: quote } = await getSupabase()
-          .from('quotes')
-          .select('*')
-          .eq('request_id', id)
-          .eq('supplier_name', storedName)
-          .single()
-        if (quote) setSubmittedQuote(quote)
-      }
+      if (reqError) setError('This quote link is invalid or has expired.')
+      else setRequest(req)
 
       setLoading(false)
     }
     fetchRequest()
-  }, [id])
+  }, [id, token])
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     setSubmitting(true)
     setSubmitError(null)
 
-    if (!id) {
-      setSubmitError('Error: Request ID not loaded. Please reload the page.')
+    if (!id || !token) {
+      setSubmitError('Error: Invalid quote link.')
       setSubmitting(false)
       return
     }
 
-    const { data: existingQuote, error: checkError } = await getSupabase()
-      .from('quotes')
-      .select('*')
-      .eq('request_id', id)
-      .eq('supplier_name', supplierName)
-      .single()
-
-    if (checkError && checkError.code !== 'PGRST116') {
-      setSubmitError(checkError.message)
-      setSubmitting(false)
-      return
-    }
-
-    if (existingQuote) {
-      setSubmittedQuote(existingQuote)
-      localStorage.setItem(`quote_supplier_${id}`, supplierName)
-      setSubmitting(false)
-      return
-    }
-
-    const { data: newQuote, error } = await getSupabase()
+    const { data: newQuote, error: insertError } = await getSupabase()
       .from('quotes')
       .insert({
         request_id: id,
@@ -100,12 +96,23 @@ export default function SupplierQuotePage() {
       .select('*')
       .single()
 
-    if (error) {
-      const isDuplicateError = error.message?.includes('unique')
-      setSubmitError(isDuplicateError ? 'A quote from this company has already been submitted.' : error.message)
-    } else if (newQuote) {
+    if (insertError) {
+      setSubmitError(insertError.message)
+      setSubmitting(false)
+      return
+    }
+
+    const { error: tokenError } = await getSupabase()
+      .from('tokens')
+      .update({ used: true })
+      .eq('token', token)
+
+    if (tokenError) {
+      console.error('Failed to mark token as used:', tokenError)
+    }
+
+    if (newQuote) {
       setSubmittedQuote(newQuote)
-      localStorage.setItem(`quote_supplier_${id}`, supplierName)
     }
     setSubmitting(false)
   }

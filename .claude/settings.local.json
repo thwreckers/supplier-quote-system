@@ -3,7 +3,8 @@
     "allow": [
       "Bash(npx create-next-app@latest . --typescript --tailwind --app --no-eslint --no-src-dir --import-alias \"@/*\" --yes)",
       "Bash(npm install:*)",
-      "Bash(npm run:*)"
+      "Bash(npm run:*)",
+      "Bash(/c/Users/NISMO/OneDrive/Documents/ABDUL/aaaa/supplier-quote-system/.env.local.example:*)"
     ]
   }
 }

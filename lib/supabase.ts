@@ -28,3 +28,11 @@ export type Quote = {
   notes: string
   created_at: string
 }
+
+export type Token = {
+  id: string
+  request_id: string
+  token: string
+  used: boolean
+  created_at: string
+}

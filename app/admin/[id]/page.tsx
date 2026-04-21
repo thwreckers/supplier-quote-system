@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { useParams } from 'next/navigation'
-import { getSupabase, type Request, type Quote } from '@/lib/supabase'
+import { getSupabase, type Request, type Quote, type Token } from '@/lib/supabase'
 
 export default function AdminRequestDetail() {
   const { id } = useParams<{ id: string }>()
@@ -13,6 +13,7 @@ export default function AdminRequestDetail() {
   const [error, setError] = useState<string | null>(null)
   const [copied, setCopied] = useState(false)
   const [togglingStatus, setTogglingStatus] = useState(false)
+  const [generatingToken, setGeneratingToken] = useState(false)
 
   useEffect(() => {
     async function fetchData() {
@@ -38,9 +39,25 @@ export default function AdminRequestDetail() {
     setTogglingStatus(false)
   }
 
-  function copyLink() {
-    navigator.clipboard.writeText(`${window.location.origin}/quote/${id}`)
+  async function copyLink() {
+    setGeneratingToken(true)
+    const token = Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15)
+
+    const { error } = await getSupabase().from('tokens').insert({
+      request_id: id,
+      token,
+    })
+
+    if (error) {
+      console.error('Failed to create token:', error)
+      setGeneratingToken(false)
+      return
+    }
+
+    const shareUrl = `${window.location.origin}/quote/${id}?token=${token}`
+    navigator.clipboard.writeText(shareUrl)
     setCopied(true)
+    setGeneratingToken(false)
     setTimeout(() => setCopied(false), 2000)
   }
 
@@ -109,9 +126,10 @@ export default function AdminRequestDetail() {
             <div className="flex gap-2 flex-wrap">
               <button
                 onClick={copyLink}
-                className="text-sm border border-gray-300 rounded-lg px-3 py-1.5 hover:bg-gray-50 transition text-gray-700"
+                disabled={generatingToken}
+                className="text-sm border border-gray-300 rounded-lg px-3 py-1.5 hover:bg-gray-50 transition text-gray-700 disabled:opacity-60"
               >
-                {copied ? 'Copied!' : 'Copy Share Link'}
+                {generatingToken ? 'Generating...' : copied ? 'Copied!' : 'Copy Share Link'}
               </button>
               <button
                 onClick={toggleStatus}
