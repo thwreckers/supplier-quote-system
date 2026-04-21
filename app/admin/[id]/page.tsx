@@ -41,7 +41,7 @@ export default function AdminRequestDetail() {
 
   async function copyLink() {
     setGeneratingToken(true)
-    const token = Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15)
+    const token = crypto.randomUUID().replace(/-/g, '').substring(0, 24)
 
     const { error } = await getSupabase().from('tokens').insert({
       request_id: id,
@@ -49,16 +49,16 @@ export default function AdminRequestDetail() {
     })
 
     if (error) {
-      console.error('Failed to create token:', error)
+      alert('Failed to create share link: ' + error.message)
       setGeneratingToken(false)
       return
     }
 
     const shareUrl = `${window.location.origin}/quote/${id}?token=${token}`
-    navigator.clipboard.writeText(shareUrl)
+    await navigator.clipboard.writeText(shareUrl)
     setCopied(true)
     setGeneratingToken(false)
-    setTimeout(() => setCopied(false), 2000)
+    setTimeout(() => setCopied(false), 3000)
   }
 
   function formatDate(dateStr: string) {
