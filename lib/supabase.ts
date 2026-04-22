@@ -28,6 +28,7 @@ export type Quote = {
   condition: 'New' | 'Used' | 'Reconditioned'
   notes: string
   admin_notes: string
+  status: 'pending' | 'selected' | 'rejected'
   created_at: string
 }
 

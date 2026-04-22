@@ -24,6 +24,7 @@ export default function AdminRequestDetail() {
   const [expiryDate, setExpiryDate] = useState('')
   const [expiryTime, setExpiryTime] = useState('')
   const [savingExpiry, setSavingExpiry] = useState(false)
+  const [updatingStatus, setUpdatingStatus] = useState<string | null>(null)
 
   const [tokenCount, setTokenCount] = useState(0)
 
@@ -172,6 +173,34 @@ export default function AdminRequestDetail() {
       hour: '2-digit',
       minute: '2-digit',
     })
+  }
+
+  async function updateQuoteStatus(quoteId: string, newStatus: 'pending' | 'selected' | 'rejected') {
+    setUpdatingStatus(quoteId)
+    const { error } = await getSupabase()
+      .from('quotes')
+      .update({ status: newStatus })
+      .eq('id', quoteId)
+
+    if (!error) {
+      setQuotes(
+        quotes.map((q) =>
+          q.id === quoteId ? { ...q, status: newStatus } : q
+        )
+      )
+    }
+    setUpdatingStatus(null)
+  }
+
+  function getStatusColor(status: string) {
+    switch (status) {
+      case 'selected':
+        return 'bg-green-100 text-green-700'
+      case 'rejected':
+        return 'bg-red-100 text-red-700'
+      default:
+        return 'bg-yellow-100 text-yellow-700'
+    }
   }
 
   if (loading) {
@@ -393,13 +422,16 @@ export default function AdminRequestDetail() {
               >
                 <div className="flex items-start justify-between gap-2 flex-wrap">
                   <div>
-                    <div className="flex items-center gap-2 mb-1">
+                    <div className="flex items-center gap-2 mb-1 flex-wrap">
                       <p className="font-semibold text-gray-900 text-sm">{quote.supplier_name}</p>
                       {index === 0 && (
                         <span className="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full font-medium">
                           Lowest
                         </span>
                       )}
+                      <span className={`text-xs px-2 py-0.5 rounded-full font-medium capitalize ${getStatusColor(quote.status)}`}>
+                        {quote.status}
+                      </span>
                     </div>
                     <span className="inline-block text-xs bg-gray-100 text-gray-600 px-2 py-0.5 rounded-full mb-2">
                       {quote.condition}
@@ -454,8 +486,41 @@ export default function AdminRequestDetail() {
 
                     <p className="text-xs text-gray-400 mt-2">{formatDate(quote.created_at)}</p>
                   </div>
-                  <div className="text-right">
+                  <div className="text-right flex flex-col gap-2">
                     <p className="text-xl font-bold text-gray-900">${Number(quote.price).toFixed(2)}</p>
+                    <div className="flex gap-1 flex-col">
+                      <button
+                        onClick={() => updateQuoteStatus(quote.id, 'selected')}
+                        disabled={updatingStatus === quote.id}
+                        className={`text-xs px-2 py-1 rounded font-medium transition ${
+                          quote.status === 'selected'
+                            ? 'bg-green-600 text-white'
+                            : 'border border-green-300 text-green-700 hover:bg-green-50'
+                        } disabled:opacity-60`}
+                      >
+                        Select
+                      </button>
+                      <button
+                        onClick={() => updateQuoteStatus(quote.id, 'rejected')}
+                        disabled={updatingStatus === quote.id}
+                        className={`text-xs px-2 py-1 rounded font-medium transition ${
+                          quote.status === 'rejected'
+                            ? 'bg-red-600 text-white'
+                            : 'border border-red-300 text-red-700 hover:bg-red-50'
+                        } disabled:opacity-60`}
+                      >
+                        Reject
+                      </button>
+                      {quote.status !== 'pending' && (
+                        <button
+                          onClick={() => updateQuoteStatus(quote.id, 'pending')}
+                          disabled={updatingStatus === quote.id}
+                          className="text-xs px-2 py-1 rounded font-medium border border-yellow-300 text-yellow-700 hover:bg-yellow-50 transition disabled:opacity-60"
+                        >
+                          Undo
+                        </button>
+                      )}
+                    </div>
                   </div>
                 </div>
               </div>
