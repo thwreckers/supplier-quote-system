@@ -20,6 +20,10 @@ export default function AdminRequestDetail() {
   const [bulkTokenCount, setBulkTokenCount] = useState(1)
   const [generatingBulk, setGeneratingBulk] = useState(false)
   const [generatedTokens, setGeneratedTokens] = useState<string[]>([])
+  const [editingExpiry, setEditingExpiry] = useState(false)
+  const [expiryDate, setExpiryDate] = useState('')
+  const [expiryTime, setExpiryTime] = useState('')
+  const [savingExpiry, setSavingExpiry] = useState(false)
 
   const [tokenCount, setTokenCount] = useState(0)
 
@@ -124,6 +128,52 @@ export default function AdminRequestDetail() {
     alert(`Copied ${generatedTokens.length} links to clipboard!`)
   }
 
+  async function saveExpiry() {
+    if (!expiryDate || !expiryTime) return
+    setSavingExpiry(true)
+    const expiryDatetime = `${expiryDate}T${expiryTime}:00`
+    const { error } = await getSupabase()
+      .from('requests')
+      .update({ expires_at: expiryDatetime })
+      .eq('id', id)
+
+    if (!error && request) {
+      setRequest({ ...request, expires_at: expiryDatetime })
+      setEditingExpiry(false)
+    }
+    setSavingExpiry(false)
+  }
+
+  function startEditExpiry() {
+    if (request?.expires_at) {
+      const dt = new Date(request.expires_at)
+      setExpiryDate(dt.toISOString().split('T')[0])
+      setExpiryTime(dt.toISOString().split('T')[1].substring(0, 5))
+    } else {
+      const tomorrow = new Date()
+      tomorrow.setDate(tomorrow.getDate() + 1)
+      setExpiryDate(tomorrow.toISOString().split('T')[0])
+      setExpiryTime('17:00')
+    }
+    setEditingExpiry(true)
+  }
+
+  function isExpired() {
+    if (!request?.expires_at) return false
+    return new Date(request.expires_at) < new Date()
+  }
+
+  function formatExpiry(dateStr: string | null) {
+    if (!dateStr) return 'No expiry set'
+    const dt = new Date(dateStr)
+    return dt.toLocaleDateString('en-AU', {
+      month: 'short',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+    })
+  }
+
   if (loading) {
     return (
       <div className="min-h-screen bg-gray-100 flex items-center justify-center">
@@ -175,6 +225,60 @@ export default function AdminRequestDetail() {
                 <p className="text-sm text-gray-600 mt-1">{request.description}</p>
               )}
               <p className="text-xs text-gray-400 mt-2">Created {formatDate(request.created_at)}</p>
+
+              {editingExpiry ? (
+                <div className="mt-3 pt-3 border-t border-gray-200">
+                  <div className="flex gap-2 items-end">
+                    <div>
+                      <label className="text-xs text-gray-600 block mb-1">Date</label>
+                      <input
+                        type="date"
+                        value={expiryDate}
+                        onChange={(e) => setExpiryDate(e.target.value)}
+                        className="text-sm border border-gray-300 rounded px-2 py-1"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-xs text-gray-600 block mb-1">Time</label>
+                      <input
+                        type="time"
+                        value={expiryTime}
+                        onChange={(e) => setExpiryTime(e.target.value)}
+                        className="text-sm border border-gray-300 rounded px-2 py-1"
+                      />
+                    </div>
+                    <button
+                      onClick={saveExpiry}
+                      disabled={savingExpiry}
+                      className="text-sm bg-green-600 text-white px-3 py-1 rounded hover:bg-green-700 disabled:opacity-60"
+                    >
+                      {savingExpiry ? 'Saving...' : 'Save'}
+                    </button>
+                    <button
+                      onClick={() => setEditingExpiry(false)}
+                      className="text-sm border border-gray-300 px-3 py-1 rounded hover:bg-gray-50"
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <div className="mt-3 flex items-center gap-2">
+                  <span className={`text-xs px-2 py-1 rounded-full font-medium ${
+                    isExpired()
+                      ? 'bg-red-100 text-red-700'
+                      : 'bg-blue-100 text-blue-700'
+                  }`}>
+                    {isExpired() ? 'Expired' : 'Expires'}: {formatExpiry(request.expires_at)}
+                  </span>
+                  <button
+                    onClick={startEditExpiry}
+                    className="text-xs text-blue-600 hover:text-blue-800 font-medium"
+                  >
+                    Edit
+                  </button>
+                </div>
+              )}
             </div>
             <div className="flex gap-2 flex-wrap items-center">
               <button

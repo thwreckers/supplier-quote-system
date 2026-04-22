@@ -21,6 +21,7 @@ export default function SupplierQuotePage() {
   const [request, setRequest] = useState<Request | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [isExpired, setIsExpired] = useState(false)
 
   // Form state
   const [supplierName, setSupplierName] = useState('')
@@ -66,7 +67,12 @@ export default function SupplierQuotePage() {
         .single()
 
       if (reqError) setError('This quote link is invalid or has expired.')
-      else setRequest(req)
+      else {
+        setRequest(req)
+        if (req.expires_at && new Date(req.expires_at) < new Date()) {
+          setIsExpired(true)
+        }
+      }
 
       setLoading(false)
     }
@@ -130,6 +136,20 @@ export default function SupplierQuotePage() {
       <div className="min-h-screen bg-gray-100 flex items-center justify-center px-4">
         <div className="bg-white rounded-lg border border-gray-200 p-8 max-w-md w-full text-center">
           <p className="text-red-600 font-medium">{error || 'Request not found'}</p>
+        </div>
+      </div>
+    )
+  }
+
+  if (isExpired) {
+    return (
+      <div className="min-h-screen bg-gray-100 flex items-center justify-center px-4">
+        <div className="bg-white rounded-lg border border-gray-200 p-8 max-w-md w-full text-center">
+          <div className="w-12 h-12 rounded-full bg-red-100 flex items-center justify-center mx-auto mb-4">
+            <span className="text-xl">⏰</span>
+          </div>
+          <h2 className="font-semibold text-gray-800 mb-1">Quote Link Expired</h2>
+          <p className="text-sm text-gray-500">This quote request is no longer accepting submissions.</p>
         </div>
       </div>
     )
