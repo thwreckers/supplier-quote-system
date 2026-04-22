@@ -203,6 +203,49 @@ export default function AdminRequestDetail() {
     }
   }
 
+  async function exportPDF() {
+    const html2pdf = (await import('html2pdf.js')).default
+
+    const element = document.createElement('div')
+    element.innerHTML = `
+      <h1 style="text-align: center; margin-bottom: 10px;">${request?.title || 'Quotes'}</h1>
+      ${request?.description ? `<p style="text-align: center; margin-bottom: 20px; color: #666;">${request.description}</p>` : ''}
+      <p style="margin-bottom: 20px; color: #999; font-size: 12px;">Exported: ${new Date().toLocaleDateString('en-AU')}</p>
+      <table style="width: 100%; border-collapse: collapse;">
+        <thead>
+          <tr style="background-color: #f0f0f0;">
+            <th style="border: 1px solid #ddd; padding: 8px; text-align: left;">Supplier</th>
+            <th style="border: 1px solid #ddd; padding: 8px; text-align: left;">Price</th>
+            <th style="border: 1px solid #ddd; padding: 8px; text-align: left;">Condition</th>
+            <th style="border: 1px solid #ddd; padding: 8px; text-align: left;">Status</th>
+            <th style="border: 1px solid #ddd; padding: 8px; text-align: left;">Notes</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${sortedQuotes.map((quote) => `
+            <tr>
+              <td style="border: 1px solid #ddd; padding: 8px;">${quote.supplier_name}</td>
+              <td style="border: 1px solid #ddd; padding: 8px;">$${Number(quote.price).toFixed(2)}</td>
+              <td style="border: 1px solid #ddd; padding: 8px;">${quote.condition}</td>
+              <td style="border: 1px solid #ddd; padding: 8px;"><strong>${quote.status.toUpperCase()}</strong></td>
+              <td style="border: 1px solid #ddd; padding: 8px;">${quote.notes ? quote.notes.substring(0, 30) : ''}</td>
+            </tr>
+          `).join('')}
+        </tbody>
+      </table>
+    `
+
+    const opt: any = {
+      margin: 10,
+      filename: `${request?.title || 'quotes'}.pdf`,
+      image: { type: 'jpeg', quality: 0.98 },
+      html2canvas: { scale: 2 },
+      jsPDF: { orientation: 'portrait', unit: 'mm', format: 'a4' },
+    }
+
+    html2pdf().set(opt).from(element).save()
+  }
+
   if (loading) {
     return (
       <div className="min-h-screen bg-gray-100 flex items-center justify-center">
@@ -397,13 +440,23 @@ export default function AdminRequestDetail() {
         </div>
 
         {/* Quotes */}
-        <div className="flex items-center justify-between mb-4">
+        <div className="flex items-center justify-between mb-4 flex-wrap gap-2">
           <h2 className="text-base font-semibold text-gray-800">
             Quotes ({quotes.length})
           </h2>
-          {quotes.length > 1 && (
-            <span className="text-xs text-gray-400">Sorted by price (lowest first)</span>
-          )}
+          <div className="flex gap-2 items-center">
+            {quotes.length > 1 && (
+              <span className="text-xs text-gray-400">Sorted by price (lowest first)</span>
+            )}
+            {quotes.length > 0 && (
+              <button
+                onClick={exportPDF}
+                className="text-sm border border-gray-300 rounded-lg px-3 py-1.5 hover:bg-gray-50 transition text-gray-700"
+              >
+                📥 Export PDF
+              </button>
+            )}
+          </div>
         </div>
 
         {quotes.length === 0 ? (
