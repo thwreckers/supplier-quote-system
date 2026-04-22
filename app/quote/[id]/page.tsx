@@ -37,6 +37,7 @@ export default function SupplierQuotePage() {
   // Image upload state
   const [uploadingImage, setUploadingImage] = useState(false)
   const [quoteImages, setQuoteImages] = useState<any[]>([])
+  const [requestImages, setRequestImages] = useState<any[]>([])
 
   useEffect(() => {
     async function fetchRequest() {
@@ -64,15 +65,23 @@ export default function SupplierQuotePage() {
         return
       }
 
-      const { data: req, error: reqError } = await getSupabase()
-        .from('requests')
-        .select('*')
-        .eq('id', id)
-        .single()
+      const [{ data: req, error: reqError }, { data: imgs }] = await Promise.all([
+        getSupabase()
+          .from('requests')
+          .select('*')
+          .eq('id', id)
+          .single(),
+        getSupabase()
+          .from('images')
+          .select('*')
+          .eq('request_id', id)
+          .eq('uploaded_by', 'requester'),
+      ])
 
       if (reqError) setError('This quote link is invalid or has expired.')
       else {
         setRequest(req)
+        if (imgs) setRequestImages(imgs)
         if (req.expires_at && new Date(req.expires_at) < new Date()) {
           setIsExpired(true)
         }
@@ -285,6 +294,21 @@ export default function SupplierQuotePage() {
           <h2 className="text-lg font-bold text-gray-900">{request.title}</h2>
           {request.description && (
             <p className="text-sm text-gray-600 mt-2">{request.description}</p>
+          )}
+          {requestImages.length > 0 && (
+            <div className="mt-4">
+              <p className="text-xs text-gray-400 uppercase tracking-wide font-medium mb-2">Images</p>
+              <div className="grid grid-cols-3 gap-2">
+                {requestImages.map((img) => (
+                  <img
+                    key={img.id}
+                    src={`${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/quote-images/${img.storage_path}`}
+                    alt="request"
+                    className="w-full h-24 object-cover rounded border border-gray-300"
+                  />
+                ))}
+              </div>
+            </div>
           )}
         </div>
 
