@@ -17,6 +17,9 @@ export default function AdminRequestDetail() {
   const [editingNoteId, setEditingNoteId] = useState<string | null>(null)
   const [editingNoteText, setEditingNoteText] = useState('')
   const [savingNote, setSavingNote] = useState(false)
+  const [bulkTokenCount, setBulkTokenCount] = useState(1)
+  const [generatingBulk, setGeneratingBulk] = useState(false)
+  const [generatedTokens, setGeneratedTokens] = useState<string[]>([])
 
   const [tokenCount, setTokenCount] = useState(0)
 
@@ -96,6 +99,31 @@ export default function AdminRequestDetail() {
     setSavingNote(false)
   }
 
+  async function generateBulkTokens() {
+    setGeneratingBulk(true)
+    const tokens: string[] = []
+
+    for (let i = 0; i < bulkTokenCount; i++) {
+      const token = crypto.randomUUID().replace(/-/g, '').substring(0, 24)
+      const { error } = await getSupabase().from('tokens').insert({
+        request_id: id,
+        token,
+      })
+      if (!error) {
+        tokens.push(`${window.location.origin}/quote/${id}?token=${token}`)
+      }
+    }
+
+    setGeneratedTokens(tokens)
+    setGeneratingBulk(false)
+  }
+
+  async function copyAllTokens() {
+    const allTokens = generatedTokens.join('\n\n')
+    await navigator.clipboard.writeText(allTokens)
+    alert(`Copied ${generatedTokens.length} links to clipboard!`)
+  }
+
   if (loading) {
     return (
       <div className="min-h-screen bg-gray-100 flex items-center justify-center">
@@ -148,7 +176,7 @@ export default function AdminRequestDetail() {
               )}
               <p className="text-xs text-gray-400 mt-2">Created {formatDate(request.created_at)}</p>
             </div>
-            <div className="flex gap-2 flex-wrap">
+            <div className="flex gap-2 flex-wrap items-center">
               <button
                 onClick={copyLink}
                 disabled={generatingToken}
@@ -156,6 +184,24 @@ export default function AdminRequestDetail() {
               >
                 {generatingToken ? 'Generating...' : copied ? 'Copied!' : 'Copy Share Link'}
               </button>
+
+              <div className="flex gap-1 items-center">
+                <input
+                  type="number"
+                  min="1"
+                  max="50"
+                  value={bulkTokenCount}
+                  onChange={(e) => setBulkTokenCount(Math.max(1, parseInt(e.target.value) || 1))}
+                  className="text-sm border border-gray-300 rounded-lg px-2 py-1.5 w-16 focus:outline-none focus:ring-2 focus:ring-red-300"
+                />
+                <button
+                  onClick={generateBulkTokens}
+                  disabled={generatingBulk}
+                  className="text-sm border border-gray-300 rounded-lg px-3 py-1.5 hover:bg-gray-50 transition text-gray-700 disabled:opacity-60"
+                >
+                  {generatingBulk ? 'Generating...' : 'Generate Bulk'}
+                </button>
+              </div>
               <button
                 onClick={toggleStatus}
                 disabled={togglingStatus}
@@ -167,6 +213,34 @@ export default function AdminRequestDetail() {
             </div>
           </div>
         </div>
+
+        {/* Bulk tokens display */}
+        {generatedTokens.length > 0 && (
+          <div className="bg-blue-50 border border-blue-300 rounded-lg p-4 mb-6 shadow-sm">
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="font-semibold text-blue-900">{generatedTokens.length} Share Links Generated</h3>
+              <button
+                onClick={copyAllTokens}
+                className="text-sm bg-blue-600 text-white px-3 py-1 rounded hover:bg-blue-700 transition"
+              >
+                Copy All Links
+              </button>
+            </div>
+            <div className="space-y-2 max-h-48 overflow-y-auto">
+              {generatedTokens.map((url, idx) => (
+                <div key={idx} className="bg-white rounded p-2 text-xs font-mono text-gray-600 break-all">
+                  {url}
+                </div>
+              ))}
+            </div>
+            <button
+              onClick={() => setGeneratedTokens([])}
+              className="text-xs text-blue-600 mt-3 hover:text-blue-800"
+            >
+              Clear
+            </button>
+          </div>
+        )}
 
         {/* Response tracking */}
         <div className="bg-white rounded-lg border border-gray-200 p-4 mb-6 shadow-sm">
