@@ -34,6 +34,10 @@ export default function SupplierQuotePage() {
   // Submitted quote state
   const [submittedQuote, setSubmittedQuote] = useState<Quote | null>(null)
 
+  // Image upload state
+  const [uploadingImage, setUploadingImage] = useState(false)
+  const [quoteImages, setQuoteImages] = useState<any[]>([])
+
   useEffect(() => {
     async function fetchRequest() {
       if (!token) {
@@ -79,6 +83,28 @@ export default function SupplierQuotePage() {
     fetchRequest()
   }, [id, token])
 
+  async function handleImageUpload(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    if (!file || !id) return
+
+    setUploadingImage(true)
+    const filename = `quote-${id}/${Date.now()}-${file.name}`
+
+    const { error: uploadError } = await getSupabase().storage
+      .from('quote-images')
+      .upload(filename, file)
+
+    if (!uploadError) {
+      setQuoteImages([...quoteImages, { storage_path: filename }])
+    }
+    setUploadingImage(false)
+    e.target.value = ''
+  }
+
+  function getImageUrl(storagePath: string) {
+    return `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/quote-images/${storagePath}`
+  }
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     setSubmitting(true)
@@ -119,6 +145,15 @@ export default function SupplierQuotePage() {
 
     if (newQuote) {
       setSubmittedQuote(newQuote)
+      // Save quote images to database
+      if (quoteImages.length > 0) {
+        const imagesToInsert = quoteImages.map((img) => ({
+          quote_id: newQuote.id,
+          storage_path: img.storage_path,
+          uploaded_by: 'supplier',
+        }))
+        await getSupabase().from('images').insert(imagesToInsert)
+      }
     }
     setSubmitting(false)
   }
@@ -319,6 +354,30 @@ export default function SupplierQuotePage() {
                 rows={3}
                 className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-red-300 resize-none"
               />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Photos (optional)</label>
+              <input
+                type="file"
+                accept="image/*"
+                onChange={handleImageUpload}
+                disabled={uploadingImage}
+                className="text-sm file:border file:border-gray-300 file:rounded file:px-2 file:py-1 hover:file:bg-gray-50"
+              />
+              {uploadingImage && <p className="text-xs text-gray-500 mt-1">Uploading...</p>}
+              {quoteImages.length > 0 && (
+                <div className="grid grid-cols-3 gap-2 mt-2">
+                  {quoteImages.map((img) => (
+                    <img
+                      key={img.storage_path}
+                      src={getImageUrl(img.storage_path)}
+                      alt="quote"
+                      className="w-full h-16 object-cover rounded border border-gray-300"
+                    />
+                  ))}
+                </div>
+              )}
             </div>
 
             <button
