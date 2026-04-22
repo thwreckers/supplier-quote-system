@@ -25,20 +25,24 @@ export default function AdminRequestDetail() {
   const [expiryTime, setExpiryTime] = useState('')
   const [savingExpiry, setSavingExpiry] = useState(false)
   const [updatingStatus, setUpdatingStatus] = useState<string | null>(null)
+  const [images, setImages] = useState<any[]>([])
+  const [uploadingImage, setUploadingImage] = useState(false)
 
   const [tokenCount, setTokenCount] = useState(0)
 
   useEffect(() => {
     async function fetchData() {
       const db = getSupabase()
-      const [{ data: req, error: reqErr }, { data: qs, error: qErr }, { count: tCount }] = await Promise.all([
+      const [{ data: req, error: reqErr }, { data: qs, error: qErr }, { count: tCount }, { data: imgs }] = await Promise.all([
         db.from('requests').select('*').eq('id', id).single(),
         db.from('quotes').select('*').eq('request_id', id).order('created_at', { ascending: true }),
         db.from('tokens').select('*', { count: 'exact', head: true }).eq('request_id', id),
+        db.from('images').select('*').eq('request_id', id),
       ])
       if (reqErr) setError(reqErr.message)
       else setRequest(req)
       if (!qErr) setQuotes(qs || [])
+      if (imgs) setImages(imgs)
       setTokenCount(tCount || 0)
       setLoading(false)
     }
@@ -201,6 +205,47 @@ export default function AdminRequestDetail() {
       default:
         return 'bg-yellow-100 text-yellow-700'
     }
+  }
+
+  async function handleImageUpload(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    if (!file || !id) return
+
+    setUploadingImage(true)
+    const filename = `${id}/${Date.now()}-${file.name}`
+
+    const { error: uploadError } = await getSupabase().storage
+      .from('quote-images')
+      .upload(filename, file)
+
+    if (uploadError) {
+      alert('Upload failed: ' + uploadError.message)
+      setUploadingImage(false)
+      return
+    }
+
+    const { error: dbError } = await getSupabase().from('images').insert({
+      request_id: id,
+      storage_path: filename,
+      uploaded_by: 'requester',
+    })
+
+    if (!dbError) {
+      setImages([...images, { request_id: id, storage_path: filename, uploaded_by: 'requester' }])
+    }
+    setUploadingImage(false)
+    e.target.value = ''
+  }
+
+  async function deleteImage(storagePath: string) {
+    const { error } = await getSupabase().storage.from('quote-images').remove([storagePath])
+    if (!error) {
+      setImages(images.filter((img) => img.storage_path !== storagePath))
+    }
+  }
+
+  function getImageUrl(storagePath: string) {
+    return `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/quote-images/${storagePath}`
   }
 
   async function exportPDF() {
@@ -386,6 +431,39 @@ export default function AdminRequestDetail() {
               >
                 {request.status === 'open' ? 'Close Request' : 'Reopen Request'}
               </button>
+            </div>
+
+            <div className="mt-6 pt-6 border-t border-gray-200 w-full">
+              <label className="text-sm font-medium text-gray-700 block mb-2">Request Images</label>
+              <div className="flex gap-2 items-center mb-3">
+                <input
+                  type="file"
+                  accept="image/*"
+                  onChange={handleImageUpload}
+                  disabled={uploadingImage}
+                  className="text-sm file:border file:border-gray-300 file:rounded file:px-2 file:py-1 hover:file:bg-gray-50"
+                />
+                {uploadingImage && <span className="text-xs text-gray-500">Uploading...</span>}
+              </div>
+              {images.length > 0 && (
+                <div className="grid grid-cols-4 gap-2">
+                  {images.map((img) => (
+                    <div key={img.storage_path} className="relative group">
+                      <img
+                        src={getImageUrl(img.storage_path)}
+                        alt="request"
+                        className="w-full h-20 object-cover rounded border border-gray-300"
+                      />
+                      <button
+                        onClick={() => deleteImage(img.storage_path)}
+                        className="absolute top-0.5 right-0.5 bg-red-600 text-white text-xs px-1.5 py-0.5 rounded opacity-0 group-hover:opacity-100 transition"
+                      >
+                        ✕
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           </div>
         </div>

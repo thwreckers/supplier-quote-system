@@ -39,3 +39,12 @@ export type Token = {
   used: boolean
   created_at: string
 }
+
+export type Image = {
+  id: string
+  request_id: string | null
+  quote_id: string | null
+  storage_path: string
+  uploaded_by: 'requester' | 'supplier'
+  created_at: string
+}
