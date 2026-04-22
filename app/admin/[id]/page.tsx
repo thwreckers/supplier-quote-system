@@ -14,6 +14,9 @@ export default function AdminRequestDetail() {
   const [copied, setCopied] = useState(false)
   const [togglingStatus, setTogglingStatus] = useState(false)
   const [generatingToken, setGeneratingToken] = useState(false)
+  const [editingNoteId, setEditingNoteId] = useState<string | null>(null)
+  const [editingNoteText, setEditingNoteText] = useState('')
+  const [savingNote, setSavingNote] = useState(false)
 
   const [tokenCount, setTokenCount] = useState(0)
 
@@ -73,6 +76,24 @@ export default function AdminRequestDetail() {
       hour: '2-digit',
       minute: '2-digit',
     })
+  }
+
+  async function saveAdminNote(quoteId: string, noteText: string) {
+    setSavingNote(true)
+    const { error } = await getSupabase()
+      .from('quotes')
+      .update({ admin_notes: noteText })
+      .eq('id', quoteId)
+
+    if (!error) {
+      setQuotes(
+        quotes.map((q) =>
+          q.id === quoteId ? { ...q, admin_notes: noteText } : q
+        )
+      )
+      setEditingNoteId(null)
+    }
+    setSavingNote(false)
   }
 
   if (loading) {
@@ -206,9 +227,54 @@ export default function AdminRequestDetail() {
                       {quote.condition}
                     </span>
                     {quote.notes && (
-                      <p className="text-sm text-gray-600">{quote.notes}</p>
+                      <p className="text-sm text-gray-600 mb-2">{quote.notes}</p>
                     )}
-                    <p className="text-xs text-gray-400 mt-1">{formatDate(quote.created_at)}</p>
+
+                    {editingNoteId === quote.id ? (
+                      <div className="mt-3 pt-3 border-t border-gray-200">
+                        <textarea
+                          value={editingNoteText}
+                          onChange={(e) => setEditingNoteText(e.target.value)}
+                          placeholder="Add internal notes..."
+                          className="w-full text-xs border border-gray-300 rounded px-2 py-1 resize-none"
+                          rows={2}
+                        />
+                        <div className="flex gap-2 mt-2">
+                          <button
+                            onClick={() => saveAdminNote(quote.id, editingNoteText)}
+                            disabled={savingNote}
+                            className="text-xs bg-green-600 text-white px-2 py-1 rounded hover:bg-green-700 disabled:opacity-60"
+                          >
+                            {savingNote ? 'Saving...' : 'Save'}
+                          </button>
+                          <button
+                            onClick={() => setEditingNoteId(null)}
+                            className="text-xs border border-gray-300 px-2 py-1 rounded hover:bg-gray-50"
+                          >
+                            Cancel
+                          </button>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="mt-3 pt-3 border-t border-gray-200">
+                        {quote.admin_notes ? (
+                          <div className="bg-blue-50 border border-blue-200 rounded p-2 mb-2">
+                            <p className="text-xs text-blue-900">{quote.admin_notes}</p>
+                          </div>
+                        ) : null}
+                        <button
+                          onClick={() => {
+                            setEditingNoteId(quote.id)
+                            setEditingNoteText(quote.admin_notes || '')
+                          }}
+                          className="text-xs text-blue-600 hover:text-blue-800 font-medium"
+                        >
+                          {quote.admin_notes ? 'Edit notes' : 'Add notes'}
+                        </button>
+                      </div>
+                    )}
+
+                    <p className="text-xs text-gray-400 mt-2">{formatDate(quote.created_at)}</p>
                   </div>
                   <div className="text-right">
                     <p className="text-xl font-bold text-gray-900">${Number(quote.price).toFixed(2)}</p>

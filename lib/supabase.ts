@@ -26,6 +26,7 @@ export type Quote = {
   price: number
   condition: 'New' | 'Used' | 'Reconditioned'
   notes: string
+  admin_notes: string
   created_at: string
 }
 
