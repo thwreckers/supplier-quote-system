@@ -8,6 +8,7 @@ export default function AdminPage() {
   const [requests, setRequests] = useState<Request[]>([])
   const [quoteCounts, setQuoteCounts] = useState<{ [requestId: string]: number }>({})
   const [loading, setLoading] = useState(true)
+  const [refreshing, setRefreshing] = useState(false)
   const [showForm, setShowForm] = useState(false)
   const [title, setTitle] = useState('')
   const [description, setDescription] = useState('')
@@ -38,6 +39,12 @@ export default function AdminPage() {
       }
     }
     setLoading(false)
+  }
+
+  async function handleRefresh() {
+    setRefreshing(true)
+    await fetchRequests()
+    setRefreshing(false)
   }
 
   useEffect(() => {
@@ -113,13 +120,22 @@ export default function AdminPage() {
         {/* Top bar */}
         <div className="flex items-center justify-between mb-6">
           <h2 className="text-lg font-semibold text-gray-800">All Requests</h2>
-          <button
-            onClick={() => { setShowForm(!showForm); setNewLink(null); setError(null) }}
-            style={{ backgroundColor: '#d32f2f' }}
-            className="text-white text-sm font-medium px-4 py-2 rounded-lg hover:opacity-90 transition"
-          >
-            {showForm ? 'Cancel' : '+ New Request'}
-          </button>
+          <div className="flex gap-2 items-center">
+            <button
+              onClick={handleRefresh}
+              disabled={refreshing}
+              className="text-sm border border-gray-300 rounded-lg px-3 py-2 hover:bg-gray-50 transition text-gray-700 disabled:opacity-60"
+            >
+              {refreshing ? 'Refreshing...' : '🔄 Refresh'}
+            </button>
+            <button
+              onClick={() => { setShowForm(!showForm); setNewLink(null); setError(null) }}
+              style={{ backgroundColor: '#d32f2f' }}
+              className="text-white text-sm font-medium px-4 py-2 rounded-lg hover:opacity-90 transition"
+            >
+              {showForm ? 'Cancel' : '+ New Request'}
+            </button>
+          </div>
         </div>
 
         {/* Create form */}
