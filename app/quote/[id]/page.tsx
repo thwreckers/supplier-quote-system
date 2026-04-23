@@ -459,7 +459,6 @@ export default function SupplierQuotePage() {
         plugins={[Zoom]}
         zoom={{
           maxZoomPixelRatio: 10,
-          wheelZoomSpeed: 0.25,
         }}
         on={{
           view: ({ index: currentIndex }) => setLightboxIndex(currentIndex),

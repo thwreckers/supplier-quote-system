@@ -765,7 +765,6 @@ export default function AdminRequestDetail() {
         plugins={[Zoom]}
         zoom={{
           maxZoomPixelRatio: 10,
-          wheelZoomSpeed: 0.25,
         }}
         on={{
           view: ({ index: currentIndex }) => setLightboxIndex(currentIndex),
