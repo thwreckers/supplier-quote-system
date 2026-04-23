@@ -19,6 +19,7 @@ export default function AdminRequestDetail() {
   const [togglingStatus, setTogglingStatus] = useState(false)
   const [generatingToken, setGeneratingToken] = useState(false)
   const [creatingGroupLink, setCreatingGroupLink] = useState(false)
+  const [groupLinkClicks, setGroupLinkClicks] = useState(0)
   const [editingNoteId, setEditingNoteId] = useState<string | null>(null)
   const [editingNoteText, setEditingNoteText] = useState('')
   const [savingNote, setSavingNote] = useState(false)
@@ -64,7 +65,17 @@ export default function AdminRequestDetail() {
       db.from('images').select('*'),
     ])
     if (reqErr) setError(reqErr.message)
-    else setRequest(req)
+    else {
+      setRequest(req)
+      // Fetch group link clicks if group_id exists
+      if (req?.group_id) {
+        const { count: clickCount } = await db
+          .from('group_link_clicks')
+          .select('*', { count: 'exact', head: true })
+          .eq('group_id', req.group_id)
+        setGroupLinkClicks(clickCount || 0)
+      }
+    }
     if (!qErr) setQuotes(qs || [])
 
     // Split images into request and quote images
@@ -148,6 +159,7 @@ export default function AdminRequestDetail() {
     if (request) {
       setRequest({ ...request, group_id: groupId })
     }
+    setGroupLinkClicks(0) // Reset click count for new group link
 
     const groupUrl = `${window.location.origin}/quote/${id}/group/${groupId}`
     await navigator.clipboard.writeText(groupUrl)
@@ -498,13 +510,20 @@ export default function AdminRequestDetail() {
                 {refreshing ? 'Refreshing...' : '🔄 Refresh'}
               </button>
 
-              <button
-                onClick={createGroupLink}
-                disabled={creatingGroupLink}
-                className="text-sm border border-blue-300 rounded-lg px-4 py-2 text-blue-700 hover:bg-blue-50 transition disabled:opacity-60 font-semibold"
-              >
-                {creatingGroupLink ? 'Creating...' : copiedGroup ? '✓ Copied Group Link!' : '👥 Create Group Link'}
-              </button>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={createGroupLink}
+                  disabled={creatingGroupLink}
+                  className="text-sm border border-blue-300 rounded-lg px-4 py-2 text-blue-700 hover:bg-blue-50 transition disabled:opacity-60 font-semibold"
+                >
+                  {creatingGroupLink ? 'Creating...' : copiedGroup ? '✓ Copied Group Link!' : '👥 Create Group Link'}
+                </button>
+                {request?.group_id && (
+                  <span className="text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded-full font-medium">
+                    {groupLinkClicks} click{groupLinkClicks !== 1 ? 's' : ''}
+                  </span>
+                )}
+              </div>
 
               <div className="flex gap-1 items-center">
                 <input
