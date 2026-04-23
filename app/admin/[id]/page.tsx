@@ -42,14 +42,15 @@ export default function AdminRequestDetail() {
 
   // Disable page scroll when lightbox is open
   useEffect(() => {
-    const handleWheel = (e: WheelEvent) => {
-      if (lightboxOpen) {
-        e.preventDefault()
-      }
+    if (lightboxOpen) {
+      document.body.style.overflow = 'hidden'
+    } else {
+      document.body.style.overflow = 'unset'
     }
 
-    window.addEventListener('wheel', handleWheel, { passive: false })
-    return () => window.removeEventListener('wheel', handleWheel)
+    return () => {
+      document.body.style.overflow = 'unset'
+    }
   }, [lightboxOpen])
 
   async function fetchData() {
