@@ -19,6 +19,7 @@ export type Request = {
   status: 'open' | 'closed'
   expires_at: string | null
   customer_details: string | null
+  group_id: string | null
 }
 
 export type Quote = {

@@ -15,8 +15,10 @@ export default function AdminRequestDetail() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [copied, setCopied] = useState(false)
+  const [copiedGroup, setCopiedGroup] = useState(false)
   const [togglingStatus, setTogglingStatus] = useState(false)
   const [generatingToken, setGeneratingToken] = useState(false)
+  const [creatingGroupLink, setCreatingGroupLink] = useState(false)
   const [editingNoteId, setEditingNoteId] = useState<string | null>(null)
   const [editingNoteText, setEditingNoteText] = useState('')
   const [savingNote, setSavingNote] = useState(false)
@@ -125,6 +127,33 @@ export default function AdminRequestDetail() {
     setCopied(true)
     setGeneratingToken(false)
     setTimeout(() => setCopied(false), 3000)
+  }
+
+  async function createGroupLink() {
+    setCreatingGroupLink(true)
+    const groupId = crypto.randomUUID().replace(/-/g, '').substring(0, 24)
+
+    const { error } = await getSupabase()
+      .from('requests')
+      .update({ group_id: groupId })
+      .eq('id', id)
+
+    if (error) {
+      alert('Failed to create group link: ' + error.message)
+      setCreatingGroupLink(false)
+      return
+    }
+
+    // Update local state
+    if (request) {
+      setRequest({ ...request, group_id: groupId })
+    }
+
+    const groupUrl = `${window.location.origin}/quote/${id}/group/${groupId}`
+    await navigator.clipboard.writeText(groupUrl)
+    setCopiedGroup(true)
+    setCreatingGroupLink(false)
+    setTimeout(() => setCopiedGroup(false), 3000)
   }
 
   function formatDate(dateStr: string) {
@@ -467,6 +496,14 @@ export default function AdminRequestDetail() {
                 title="Refresh quotes and responses"
               >
                 {refreshing ? 'Refreshing...' : '🔄 Refresh'}
+              </button>
+
+              <button
+                onClick={createGroupLink}
+                disabled={creatingGroupLink}
+                className="text-sm border border-blue-300 rounded-lg px-4 py-2 text-blue-700 hover:bg-blue-50 transition disabled:opacity-60 font-semibold"
+              >
+                {creatingGroupLink ? 'Creating...' : copiedGroup ? '✓ Copied Group Link!' : '👥 Create Group Link'}
               </button>
 
               <div className="flex gap-1 items-center">
