@@ -13,11 +13,15 @@ export default function GroupLinkPage() {
   useEffect(() => {
     async function handleGroupLink() {
       // Track the click
-      await getSupabase()
+      const { error: clickError } = await getSupabase()
         .from('group_link_clicks')
         .insert({
           group_id: groupId,
         })
+
+      if (clickError) {
+        console.error('Failed to log click:', clickError)
+      }
 
       // Check if user already has a token for this group in localStorage
       const storageKey = `quote_token_${id}_${groupId}`
