@@ -40,6 +40,18 @@ export default function AdminRequestDetail() {
   const [tokenCount, setTokenCount] = useState(0)
   const [refreshing, setRefreshing] = useState(false)
 
+  // Disable page scroll when lightbox is open
+  useEffect(() => {
+    const handleWheel = (e: WheelEvent) => {
+      if (lightboxOpen) {
+        e.preventDefault()
+      }
+    }
+
+    window.addEventListener('wheel', handleWheel, { passive: false })
+    return () => window.removeEventListener('wheel', handleWheel)
+  }, [lightboxOpen])
+
   async function fetchData() {
     const db = getSupabase()
     const [{ data: req, error: reqErr }, { data: qs, error: qErr }, { count: tCount }, { data: allImgs, error: imgErr }] = await Promise.all([

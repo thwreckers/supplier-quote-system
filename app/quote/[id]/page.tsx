@@ -47,6 +47,18 @@ export default function SupplierQuotePage() {
   const [lightboxIndex, setLightboxIndex] = useState(0)
   const [lightboxImages, setLightboxImages] = useState<any[]>([])
 
+  // Disable page scroll when lightbox is open
+  useEffect(() => {
+    const handleWheel = (e: WheelEvent) => {
+      if (lightboxOpen) {
+        e.preventDefault()
+      }
+    }
+
+    window.addEventListener('wheel', handleWheel, { passive: false })
+    return () => window.removeEventListener('wheel', handleWheel)
+  }, [lightboxOpen])
+
   useEffect(() => {
     async function fetchRequest() {
       if (!token) {
