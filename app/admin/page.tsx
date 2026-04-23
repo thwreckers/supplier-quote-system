@@ -10,6 +10,7 @@ export default function AdminPage() {
   const [showForm, setShowForm] = useState(false)
   const [title, setTitle] = useState('')
   const [description, setDescription] = useState('')
+  const [customerDetails, setCustomerDetails] = useState('')
   const [submitting, setSubmitting] = useState(false)
   const [newLink, setNewLink] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
@@ -34,7 +35,12 @@ export default function AdminPage() {
     setError(null)
     const { data, error } = await getSupabase()
       .from('requests')
-      .insert({ title, description, status: 'open' })
+      .insert({
+        title,
+        description,
+        customer_details: customerDetails || null,
+        status: 'open'
+      })
       .select()
       .single()
     if (error) {
@@ -44,6 +50,7 @@ export default function AdminPage() {
       setNewLink(link)
       setTitle('')
       setDescription('')
+      setCustomerDetails('')
       setShowForm(false)
       fetchRequests()
     }
@@ -124,6 +131,16 @@ export default function AdminPage() {
                   value={description}
                   onChange={e => setDescription(e.target.value)}
                   rows={3}
+                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-red-300 resize-none"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Customer Details (Admin Only)</label>
+                <textarea
+                  placeholder="Customer name, contact info, internal notes, etc..."
+                  value={customerDetails}
+                  onChange={e => setCustomerDetails(e.target.value)}
+                  rows={2}
                   className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-red-300 resize-none"
                 />
               </div>

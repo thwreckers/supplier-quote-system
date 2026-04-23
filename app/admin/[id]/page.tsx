@@ -27,25 +27,51 @@ export default function AdminRequestDetail() {
   const [updatingStatus, setUpdatingStatus] = useState<string | null>(null)
   const [images, setImages] = useState<any[]>([])
   const [uploadingImage, setUploadingImage] = useState(false)
+  const [quoteImages, setQuoteImages] = useState<{ [quoteId: string]: any[] }>({})
 
   const [tokenCount, setTokenCount] = useState(0)
+  const [refreshing, setRefreshing] = useState(false)
+
+  async function fetchData() {
+    const db = getSupabase()
+    const [{ data: req, error: reqErr }, { data: qs, error: qErr }, { count: tCount }, { data: allImgs, error: imgErr }] = await Promise.all([
+      db.from('requests').select('*').eq('id', id).single(),
+      db.from('quotes').select('*').eq('request_id', id).order('created_at', { ascending: true }),
+      db.from('tokens').select('*', { count: 'exact', head: true }).eq('request_id', id),
+      db.from('images').select('*'),
+    ])
+    if (reqErr) setError(reqErr.message)
+    else setRequest(req)
+    if (!qErr) setQuotes(qs || [])
+
+    // Split images into request and quote images
+    if (allImgs) {
+      const requestImgs = allImgs.filter((img) => img.request_id === id && !img.quote_id)
+      const quoteImgsData = allImgs.filter((img) => img.quote_id)
+
+      setImages(requestImgs)
+
+      // Group quote images by quote_id
+      const grouped: { [quoteId: string]: any[] } = {}
+      quoteImgsData.forEach((img) => {
+        if (!grouped[img.quote_id]) grouped[img.quote_id] = []
+        grouped[img.quote_id].push(img)
+      })
+      setQuoteImages(grouped)
+    }
+
+    if (imgErr) console.error('Image fetch error:', imgErr)
+    setTokenCount(tCount || 0)
+    setLoading(false)
+  }
+
+  async function handleRefresh() {
+    setRefreshing(true)
+    await fetchData()
+    setRefreshing(false)
+  }
 
   useEffect(() => {
-    async function fetchData() {
-      const db = getSupabase()
-      const [{ data: req, error: reqErr }, { data: qs, error: qErr }, { count: tCount }, { data: imgs }] = await Promise.all([
-        db.from('requests').select('*').eq('id', id).single(),
-        db.from('quotes').select('*').eq('request_id', id).order('created_at', { ascending: true }),
-        db.from('tokens').select('*', { count: 'exact', head: true }).eq('request_id', id),
-        db.from('images').select('*').eq('request_id', id),
-      ])
-      if (reqErr) setError(reqErr.message)
-      else setRequest(req)
-      if (!qErr) setQuotes(qs || [])
-      if (imgs) setImages(imgs)
-      setTokenCount(tCount || 0)
-      setLoading(false)
-    }
     fetchData()
   }, [id])
 
@@ -341,6 +367,12 @@ export default function AdminRequestDetail() {
               {request.description && (
                 <p className="text-sm text-gray-600 mt-1">{request.description}</p>
               )}
+              {request.customer_details && (
+                <div className="mt-2 p-2 bg-blue-50 border border-blue-200 rounded text-sm text-blue-900">
+                  <p className="text-xs font-medium text-blue-600 mb-1">Customer Details</p>
+                  <p className="whitespace-pre-wrap">{request.customer_details}</p>
+                </div>
+              )}
               <p className="text-xs text-gray-400 mt-2">Created {formatDate(request.created_at)}</p>
 
               {editingExpiry ? (
@@ -401,9 +433,19 @@ export default function AdminRequestDetail() {
               <button
                 onClick={copyLink}
                 disabled={generatingToken}
-                className="text-sm border border-gray-300 rounded-lg px-3 py-1.5 hover:bg-gray-50 transition text-gray-700 disabled:opacity-60"
+                style={{ backgroundColor: '#d32f2f' }}
+                className="text-sm text-white font-semibold rounded-lg px-4 py-2 hover:opacity-90 transition disabled:opacity-60 shadow-md"
               >
-                {generatingToken ? 'Generating...' : copied ? 'Copied!' : 'Copy Share Link'}
+                {generatingToken ? 'Generating...' : copied ? '✓ Copied!' : '📋 Copy Share Link'}
+              </button>
+
+              <button
+                onClick={handleRefresh}
+                disabled={refreshing}
+                className="text-sm border border-gray-300 rounded-lg px-3 py-2 hover:bg-gray-50 transition text-gray-700 disabled:opacity-60"
+                title="Refresh quotes and responses"
+              >
+                {refreshing ? 'Refreshing...' : '🔄 Refresh'}
               </button>
 
               <div className="flex gap-1 items-center">
@@ -517,6 +559,11 @@ export default function AdminRequestDetail() {
           )}
         </div>
 
+        {/* Debug: Show quote images data */}
+        <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3 mb-6">
+          <p className="text-xs font-mono text-yellow-900">Debug: {JSON.stringify(quoteImages)}</p>
+        </div>
+
         {/* Quotes */}
         <div className="flex items-center justify-between mb-4 flex-wrap gap-2">
           <h2 className="text-base font-semibold text-gray-800">
@@ -614,6 +661,26 @@ export default function AdminRequestDetail() {
                         </button>
                       </div>
                     )}
+
+                    <div className="mt-3 pt-3 border-t border-gray-200">
+                      <p className="text-xs text-gray-500 font-medium mb-2">
+                        Supplier Images {quoteImages[quote.id] ? `(${quoteImages[quote.id].length})` : '(0)'}
+                      </p>
+                      {quoteImages[quote.id] && quoteImages[quote.id].length > 0 ? (
+                        <div className="grid grid-cols-4 gap-2">
+                          {quoteImages[quote.id].map((img) => (
+                            <img
+                              key={img.id}
+                              src={getImageUrl(img.storage_path)}
+                              alt="quote"
+                              className="w-full h-16 object-cover rounded border border-gray-300"
+                            />
+                          ))}
+                        </div>
+                      ) : (
+                        <p className="text-xs text-gray-400">No images uploaded</p>
+                      )}
+                    </div>
 
                     <p className="text-xs text-gray-400 mt-2">{formatDate(quote.created_at)}</p>
                   </div>

@@ -18,6 +18,7 @@ export type Request = {
   description: string
   status: 'open' | 'closed'
   expires_at: string | null
+  customer_details: string | null
 }
 
 export type Quote = {
