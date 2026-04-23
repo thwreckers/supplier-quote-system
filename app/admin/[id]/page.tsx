@@ -559,11 +559,6 @@ export default function AdminRequestDetail() {
           )}
         </div>
 
-        {/* Debug: Show quote images data */}
-        <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3 mb-6">
-          <p className="text-xs font-mono text-yellow-900">Debug: {JSON.stringify(quoteImages)}</p>
-        </div>
-
         {/* Quotes */}
         <div className="flex items-center justify-between mb-4 flex-wrap gap-2">
           <h2 className="text-base font-semibold text-gray-800">
