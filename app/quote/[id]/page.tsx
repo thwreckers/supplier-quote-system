@@ -3,6 +3,8 @@
 import { useEffect, useState } from 'react'
 import { useParams, useSearchParams } from 'next/navigation'
 import { getSupabase, type Request } from '@/lib/supabase'
+import Lightbox from 'yet-another-react-lightbox'
+import 'yet-another-react-lightbox/styles.css'
 
 interface Quote {
   id: string
@@ -38,6 +40,11 @@ export default function SupplierQuotePage() {
   const [uploadingImage, setUploadingImage] = useState(false)
   const [quoteImages, setQuoteImages] = useState<any[]>([])
   const [requestImages, setRequestImages] = useState<any[]>([])
+
+  // Lightbox state
+  const [lightboxOpen, setLightboxOpen] = useState(false)
+  const [lightboxIndex, setLightboxIndex] = useState(0)
+  const [lightboxImages, setLightboxImages] = useState<any[]>([])
 
   useEffect(() => {
     async function fetchRequest() {
@@ -299,12 +306,19 @@ export default function SupplierQuotePage() {
             <div className="mt-4">
               <p className="text-xs text-gray-400 uppercase tracking-wide font-medium mb-2">Images</p>
               <div className="grid grid-cols-3 gap-2">
-                {requestImages.map((img) => (
+                {requestImages.map((img, idx) => (
                   <img
                     key={img.id}
                     src={`${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/quote-images/${img.storage_path}`}
                     alt="request"
-                    className="w-full h-24 object-cover rounded border border-gray-300"
+                    className="w-full h-24 object-cover rounded border border-gray-300 cursor-pointer hover:opacity-80 transition"
+                    onClick={() => {
+                      setLightboxImages(requestImages.map(i => ({
+                        src: `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/quote-images/${i.storage_path}`
+                      })))
+                      setLightboxIndex(idx)
+                      setLightboxOpen(true)
+                    }}
                   />
                 ))}
               </div>
@@ -392,12 +406,19 @@ export default function SupplierQuotePage() {
               {uploadingImage && <p className="text-xs text-gray-500 mt-1">Uploading...</p>}
               {quoteImages.length > 0 && (
                 <div className="grid grid-cols-3 gap-2 mt-2">
-                  {quoteImages.map((img) => (
+                  {quoteImages.map((img, idx) => (
                     <img
                       key={img.storage_path}
                       src={getImageUrl(img.storage_path)}
                       alt="quote"
-                      className="w-full h-16 object-cover rounded border border-gray-300"
+                      className="w-full h-16 object-cover rounded border border-gray-300 cursor-pointer hover:opacity-80 transition"
+                      onClick={() => {
+                        setLightboxImages(quoteImages.map(i => ({
+                          src: getImageUrl(i.storage_path)
+                        })))
+                        setLightboxIndex(idx)
+                        setLightboxOpen(true)
+                      }}
                     />
                   ))}
                 </div>
@@ -415,6 +436,16 @@ export default function SupplierQuotePage() {
           </form>
         </div>
       </main>
+
+      <Lightbox
+        open={lightboxOpen}
+        close={() => setLightboxOpen(false)}
+        slides={lightboxImages}
+        index={lightboxIndex}
+        on={{
+          view: ({ index: currentIndex }) => setLightboxIndex(currentIndex),
+        }}
+      />
     </div>
   )
 }

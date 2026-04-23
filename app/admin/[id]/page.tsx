@@ -4,6 +4,8 @@ import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { useParams } from 'next/navigation'
 import { getSupabase, type Request, type Quote, type Token } from '@/lib/supabase'
+import Lightbox from 'yet-another-react-lightbox'
+import 'yet-another-react-lightbox/styles.css'
 
 export default function AdminRequestDetail() {
   const { id } = useParams<{ id: string }>()
@@ -28,6 +30,11 @@ export default function AdminRequestDetail() {
   const [images, setImages] = useState<any[]>([])
   const [uploadingImage, setUploadingImage] = useState(false)
   const [quoteImages, setQuoteImages] = useState<{ [quoteId: string]: any[] }>({})
+
+  // Lightbox state
+  const [lightboxOpen, setLightboxOpen] = useState(false)
+  const [lightboxIndex, setLightboxIndex] = useState(0)
+  const [lightboxImages, setLightboxImages] = useState<any[]>([])
 
   const [tokenCount, setTokenCount] = useState(0)
   const [refreshing, setRefreshing] = useState(false)
@@ -489,12 +496,19 @@ export default function AdminRequestDetail() {
               </div>
               {images.length > 0 && (
                 <div className="grid grid-cols-4 gap-2">
-                  {images.map((img) => (
+                  {images.map((img, idx) => (
                     <div key={img.storage_path} className="relative group">
                       <img
                         src={getImageUrl(img.storage_path)}
                         alt="request"
-                        className="w-full h-20 object-cover rounded border border-gray-300"
+                        className="w-full h-20 object-cover rounded border border-gray-300 cursor-pointer hover:opacity-80 transition"
+                        onClick={() => {
+                          setLightboxImages(images.map(i => ({
+                            src: getImageUrl(i.storage_path)
+                          })))
+                          setLightboxIndex(idx)
+                          setLightboxOpen(true)
+                        }}
                       />
                       <button
                         onClick={() => deleteImage(img.storage_path)}
@@ -663,12 +677,19 @@ export default function AdminRequestDetail() {
                       </p>
                       {quoteImages[quote.id] && quoteImages[quote.id].length > 0 ? (
                         <div className="grid grid-cols-4 gap-2">
-                          {quoteImages[quote.id].map((img) => (
+                          {quoteImages[quote.id].map((img, idx) => (
                             <img
                               key={img.id}
                               src={getImageUrl(img.storage_path)}
                               alt="quote"
-                              className="w-full h-16 object-cover rounded border border-gray-300"
+                              className="w-full h-16 object-cover rounded border border-gray-300 cursor-pointer hover:opacity-80 transition"
+                              onClick={() => {
+                                setLightboxImages(quoteImages[quote.id].map(i => ({
+                                  src: getImageUrl(i.storage_path)
+                                })))
+                                setLightboxIndex(idx)
+                                setLightboxOpen(true)
+                              }}
                             />
                           ))}
                         </div>
@@ -721,6 +742,16 @@ export default function AdminRequestDetail() {
           </div>
         )}
       </main>
+
+      <Lightbox
+        open={lightboxOpen}
+        close={() => setLightboxOpen(false)}
+        slides={lightboxImages}
+        index={lightboxIndex}
+        on={{
+          view: ({ index: currentIndex }) => setLightboxIndex(currentIndex),
+        }}
+      />
     </div>
   )
 }
