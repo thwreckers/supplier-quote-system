@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react'
 import { useParams, useSearchParams } from 'next/navigation'
 import { getSupabase, type Request } from '@/lib/supabase'
 import Lightbox from 'yet-another-react-lightbox'
+import Zoom from 'yet-another-react-lightbox/plugins/zoom'
 import 'yet-another-react-lightbox/styles.css'
 
 interface Quote {
@@ -442,6 +443,7 @@ export default function SupplierQuotePage() {
         close={() => setLightboxOpen(false)}
         slides={lightboxImages}
         index={lightboxIndex}
+        plugins={[Zoom]}
         on={{
           view: ({ index: currentIndex }) => setLightboxIndex(currentIndex),
         }}

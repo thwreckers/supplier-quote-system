@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { useParams } from 'next/navigation'
 import { getSupabase, type Request, type Quote, type Token } from '@/lib/supabase'
 import Lightbox from 'yet-another-react-lightbox'
+import Zoom from 'yet-another-react-lightbox/plugins/zoom'
 import 'yet-another-react-lightbox/styles.css'
 
 export default function AdminRequestDetail() {
@@ -748,6 +749,7 @@ export default function AdminRequestDetail() {
         close={() => setLightboxOpen(false)}
         slides={lightboxImages}
         index={lightboxIndex}
+        plugins={[Zoom]}
         on={{
           view: ({ index: currentIndex }) => setLightboxIndex(currentIndex),
         }}
