@@ -750,6 +750,13 @@ export default function AdminRequestDetail() {
         slides={lightboxImages}
         index={lightboxIndex}
         plugins={[Zoom]}
+        zoom={{
+          maxZoomPixelRatio: 10,
+          zoomInMultiplier: 1.5,
+          doubleTapDelay: 300,
+          doubleClickDelay: 300,
+          doubleClickMaxStops: 2,
+        }}
         on={{
           view: ({ index: currentIndex }) => setLightboxIndex(currentIndex),
         }}
