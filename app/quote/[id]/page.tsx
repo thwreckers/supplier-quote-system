@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { useParams, useSearchParams } from 'next/navigation'
-import { getSupabase, type Request } from '@/lib/supabase'
+import { getSupabase, type Request, type CustomField } from '@/lib/supabase'
 import Lightbox from 'yet-another-react-lightbox'
 import Zoom from 'yet-another-react-lightbox/plugins/zoom'
 import 'yet-another-react-lightbox/styles.css'
@@ -46,6 +46,10 @@ export default function SupplierQuotePage() {
   const [lightboxOpen, setLightboxOpen] = useState(false)
   const [lightboxIndex, setLightboxIndex] = useState(0)
   const [lightboxImages, setLightboxImages] = useState<any[]>([])
+
+  // Custom fields state
+  const [customFields, setCustomFields] = useState<CustomField[]>([])
+  const [fieldValues, setFieldValues] = useState<{ [fieldId: string]: string }>({})
 
   // Disable page scroll when lightbox is open
   useEffect(() => {
@@ -102,6 +106,9 @@ export default function SupplierQuotePage() {
       if (reqError) setError('This quote link is invalid or has expired.')
       else {
         setRequest(req)
+        if (req?.custom_fields) {
+          setCustomFields(req.custom_fields)
+        }
         if (imgs) setRequestImages(imgs)
         if (req.expires_at && new Date(req.expires_at) < new Date()) {
           setIsExpired(true)
@@ -146,6 +153,12 @@ export default function SupplierQuotePage() {
       return
     }
 
+    // Build quote_fields array from custom field values
+    const quoteFields = Object.entries(fieldValues).map(([fieldId, value]) => ({
+      field_id: fieldId,
+      value,
+    }))
+
     const { data: newQuote, error: insertError } = await getSupabase()
       .from('quotes')
       .insert({
@@ -154,6 +167,7 @@ export default function SupplierQuotePage() {
         price: parseFloat(price),
         condition,
         notes,
+        quote_fields: quoteFields.length > 0 ? quoteFields : null,
       })
       .select('*')
       .single()
@@ -396,6 +410,63 @@ export default function SupplierQuotePage() {
                 <option value="Reconditioned">Reconditioned</option>
               </select>
             </div>
+
+            {/* Custom Fields */}
+            {customFields.map(field => (
+              <div key={field.id}>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  {field.name}
+                  {field.required && <span style={{ color: '#d32f2f' }}>*</span>}
+                </label>
+                {field.type === 'text' && (
+                  <input
+                    type="text"
+                    required={field.required}
+                    placeholder={`Enter ${field.name.toLowerCase()}`}
+                    value={fieldValues[field.id] || ''}
+                    onChange={e => setFieldValues({ ...fieldValues, [field.id]: e.target.value })}
+                    className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-red-300"
+                  />
+                )}
+                {field.type === 'number' && (
+                  <input
+                    type="number"
+                    required={field.required}
+                    min="0"
+                    step="0.01"
+                    placeholder={`Enter ${field.name.toLowerCase()}`}
+                    value={fieldValues[field.id] || ''}
+                    onChange={e => setFieldValues({ ...fieldValues, [field.id]: e.target.value })}
+                    className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-red-300"
+                  />
+                )}
+                {field.type === 'select' && field.options && (
+                  <select
+                    required={field.required}
+                    value={fieldValues[field.id] || ''}
+                    onChange={e => setFieldValues({ ...fieldValues, [field.id]: e.target.value })}
+                    className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-red-300 bg-white"
+                  >
+                    <option value="">Select an option</option>
+                    {field.options.map(option => (
+                      <option key={option} value={option}>
+                        {option}
+                      </option>
+                    ))}
+                  </select>
+                )}
+                {field.type === 'textarea' && (
+                  <textarea
+                    required={field.required}
+                    placeholder={`Enter ${field.name.toLowerCase()}`}
+                    value={fieldValues[field.id] || ''}
+                    onChange={e => setFieldValues({ ...fieldValues, [field.id]: e.target.value })}
+                    rows={3}
+                    className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-red-300 resize-none"
+                  />
+                )}
+              </div>
+            ))}
 
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Notes</label>

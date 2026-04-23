@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { useParams } from 'next/navigation'
-import { getSupabase, type Request, type Quote, type Token } from '@/lib/supabase'
+import { getSupabase, type Request, type Quote, type Token, type CustomField } from '@/lib/supabase'
 import Lightbox from 'yet-another-react-lightbox'
 import Zoom from 'yet-another-react-lightbox/plugins/zoom'
 import 'yet-another-react-lightbox/styles.css'
@@ -43,6 +43,15 @@ export default function AdminRequestDetail() {
   const [tokenCount, setTokenCount] = useState(0)
   const [refreshing, setRefreshing] = useState(false)
 
+  // Field editing state
+  const [editingFields, setEditingFields] = useState(false)
+  const [customFields, setCustomFields] = useState<CustomField[]>([])
+  const [newFieldName, setNewFieldName] = useState('')
+  const [newFieldType, setNewFieldType] = useState<'text' | 'number' | 'select' | 'textarea'>('text')
+  const [newFieldRequired, setNewFieldRequired] = useState(false)
+  const [newFieldOptions, setNewFieldOptions] = useState('')
+  const [savingFields, setSavingFields] = useState(false)
+
   // Disable page scroll when lightbox is open
   useEffect(() => {
     if (lightboxOpen) {
@@ -67,6 +76,9 @@ export default function AdminRequestDetail() {
     if (reqErr) setError(reqErr.message)
     else {
       setRequest(req)
+      if (req?.custom_fields) {
+        setCustomFields(req.custom_fields)
+      }
       // Fetch group link clicks if group_id exists
       if (req?.group_id) {
         const { count: clickCount } = await db
@@ -334,6 +346,56 @@ export default function AdminRequestDetail() {
 
   function getImageUrl(storagePath: string) {
     return `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/quote-images/${storagePath}`
+  }
+
+  async function addCustomField() {
+    if (!newFieldName.trim() || !request) return
+
+    const newField: CustomField = {
+      id: `field_${Date.now()}`,
+      name: newFieldName,
+      type: newFieldType,
+      required: newFieldRequired,
+      options: newFieldType === 'select' ? newFieldOptions.split(',').map(o => o.trim()) : undefined,
+    }
+
+    const updatedFields = [...customFields, newField]
+    setSavingFields(true)
+    const { error } = await getSupabase()
+      .from('requests')
+      .update({ custom_fields: updatedFields })
+      .eq('id', id)
+
+    if (!error) {
+      setCustomFields(updatedFields)
+      if (request) setRequest({ ...request, custom_fields: updatedFields })
+      setNewFieldName('')
+      setNewFieldType('text')
+      setNewFieldRequired(false)
+      setNewFieldOptions('')
+    }
+    setSavingFields(false)
+  }
+
+  async function removeCustomField(fieldId: string) {
+    if (!request) return
+    const updatedFields = customFields.filter(f => f.id !== fieldId)
+    setSavingFields(true)
+    const { error } = await getSupabase()
+      .from('requests')
+      .update({ custom_fields: updatedFields })
+      .eq('id', id)
+
+    if (!error) {
+      setCustomFields(updatedFields)
+      if (request) setRequest({ ...request, custom_fields: updatedFields })
+    }
+    setSavingFields(false)
+  }
+
+  function getQuoteFieldValue(quote: Quote, fieldId: string): string | undefined {
+    if (!quote.quote_fields) return undefined
+    return quote.quote_fields.find(f => f.field_id === fieldId)?.value
   }
 
   async function exportPDF() {

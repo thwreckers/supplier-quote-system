@@ -11,6 +11,30 @@ export function getSupabase(): SupabaseClient {
   return _client
 }
 
+export type Customer = {
+  id: string
+  name: string
+  company: string | null
+  contact_person: string | null
+  email: string | null
+  phone: string | null
+  notes: string | null
+  created_at: string
+}
+
+export type CustomField = {
+  id: string
+  name: string
+  type: 'text' | 'number' | 'select' | 'textarea'
+  required: boolean
+  options?: string[]
+}
+
+export type QuoteField = {
+  field_id: string
+  value: string
+}
+
 export type Request = {
   id: string
   created_at: string
@@ -19,7 +43,9 @@ export type Request = {
   status: 'open' | 'closed'
   expires_at: string | null
   customer_details: string | null
+  customer_id: string | null
   group_id: string | null
+  custom_fields: CustomField[] | null
 }
 
 export type Quote = {
@@ -32,6 +58,7 @@ export type Quote = {
   admin_notes: string
   status: 'pending' | 'selected' | 'rejected'
   created_at: string
+  quote_fields: QuoteField[] | null
 }
 
 export type Token = {
