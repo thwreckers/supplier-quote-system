@@ -6,6 +6,7 @@ import { getSupabase, type Request } from '@/lib/supabase'
 
 export default function AdminPage() {
   const [requests, setRequests] = useState<Request[]>([])
+  const [quoteCounts, setQuoteCounts] = useState<{ [requestId: string]: number }>({})
   const [loading, setLoading] = useState(true)
   const [showForm, setShowForm] = useState(false)
   const [title, setTitle] = useState('')
@@ -21,7 +22,21 @@ export default function AdminPage() {
       .select('*')
       .order('created_at', { ascending: false })
     if (error) setError(error.message)
-    else setRequests(data || [])
+    else {
+      setRequests(data || [])
+      // Fetch quote counts for each request
+      if (data) {
+        const counts: { [requestId: string]: number } = {}
+        for (const req of data) {
+          const { count } = await getSupabase()
+            .from('quotes')
+            .select('*', { count: 'exact', head: true })
+            .eq('request_id', req.id)
+          counts[req.id] = count || 0
+        }
+        setQuoteCounts(counts)
+      }
+    }
     setLoading(false)
   }
 
@@ -176,15 +191,22 @@ export default function AdminPage() {
                       )}
                       <p className="text-xs text-gray-400 mt-1">{formatDate(req.created_at)}</p>
                     </div>
-                    <span
-                      className={`text-xs font-medium px-2 py-0.5 rounded-full shrink-0 ${
-                        req.status === 'open'
-                          ? 'bg-green-100 text-green-700'
-                          : 'bg-gray-100 text-gray-500'
-                      }`}
-                    >
-                      {req.status}
-                    </span>
+                    <div className="flex items-center gap-2 shrink-0">
+                      <span
+                        className={`text-xs font-medium px-2 py-0.5 rounded-full ${
+                          req.status === 'open'
+                            ? 'bg-green-100 text-green-700'
+                            : 'bg-gray-100 text-gray-500'
+                        }`}
+                      >
+                        {req.status}
+                      </span>
+                      {quoteCounts[req.id] > 0 && (
+                        <span className="text-xs font-bold bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full">
+                          +{quoteCounts[req.id]} quote{quoteCounts[req.id] !== 1 ? 's' : ''}
+                        </span>
+                      )}
+                    </div>
                   </div>
                 </div>
               </Link>
