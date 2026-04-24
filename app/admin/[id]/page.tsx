@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { useParams } from 'next/navigation'
-import { getSupabase, type Request, type Quote, type Token, type CustomField } from '@/lib/supabase'
+import { getSupabase, type Request, type Quote, type Token, type CustomField, type SelectedSupplier } from '@/lib/supabase'
 import Lightbox from 'yet-another-react-lightbox'
 import Zoom from 'yet-another-react-lightbox/plugins/zoom'
 import 'yet-another-react-lightbox/styles.css'
@@ -86,7 +86,7 @@ export default function AdminRequestDetail() {
       // Initialize selected parts from request data
       if (req?.selected_suppliers) {
         const partsMap: { [partIdx: number]: string } = {}
-        req.selected_suppliers.forEach((supplier) => {
+        req.selected_suppliers.forEach((supplier: SelectedSupplier) => {
           partsMap[supplier.part_index] = supplier.quote_id
         })
         setSelectedParts(partsMap)
