@@ -21,6 +21,16 @@ export default function AdminPage() {
   const [selectedCustomerId, setSelectedCustomerId] = useState<string | null>(null)
   const [searchCustomer, setSearchCustomer] = useState('')
 
+  // Form-specific customer selection
+  const [formCustomerId, setFormCustomerId] = useState<string | null>(null)
+  const [showAddCustomer, setShowAddCustomer] = useState(false)
+  const [newCustomerName, setNewCustomerName] = useState('')
+  const [newCustomerCompany, setNewCustomerCompany] = useState('')
+  const [newCustomerEmail, setNewCustomerEmail] = useState('')
+  const [newCustomerPhone, setNewCustomerPhone] = useState('')
+  const [newCustomerNotes, setNewCustomerNotes] = useState('')
+  const [addingCustomer, setAddingCustomer] = useState(false)
+
   async function fetchRequests() {
     const db = getSupabase()
 
@@ -63,6 +73,64 @@ export default function AdminPage() {
     setRefreshing(false)
   }
 
+  function selectCustomerForForm(customerId: string) {
+    const customer = customers.find(c => c.id === customerId)
+    if (customer) {
+      setFormCustomerId(customerId)
+      // Auto-fill customer details
+      const detailsText = [
+        customer.name,
+        customer.company && `Company: ${customer.company}`,
+        customer.contact_person && `Contact: ${customer.contact_person}`,
+        customer.email && `Email: ${customer.email}`,
+        customer.phone && `Phone: ${customer.phone}`,
+        customer.notes && `Notes: ${customer.notes}`
+      ]
+        .filter(Boolean)
+        .join('\n')
+      setCustomerDetails(detailsText)
+    }
+  }
+
+  async function handleAddCustomer(e: React.FormEvent) {
+    e.preventDefault()
+    if (!newCustomerName.trim()) {
+      setError('Customer name is required')
+      return
+    }
+
+    setAddingCustomer(true)
+    const { data, error: err } = await getSupabase()
+      .from('customers')
+      .insert({
+        name: newCustomerName,
+        company: newCustomerCompany || null,
+        email: newCustomerEmail || null,
+        phone: newCustomerPhone || null,
+        notes: newCustomerNotes || null,
+      })
+      .select()
+      .single()
+
+    if (err) {
+      setError(err.message)
+      setAddingCustomer(false)
+    } else {
+      // Add to local customers list
+      setCustomers([...customers, data].sort((a, b) => a.name.localeCompare(b.name)))
+      // Select the newly created customer
+      selectCustomerForForm(data.id)
+      // Reset add customer form
+      setNewCustomerName('')
+      setNewCustomerCompany('')
+      setNewCustomerEmail('')
+      setNewCustomerPhone('')
+      setNewCustomerNotes('')
+      setShowAddCustomer(false)
+      setAddingCustomer(false)
+    }
+  }
+
   useEffect(() => {
     fetchRequests()
   }, [])
@@ -91,6 +159,7 @@ export default function AdminPage() {
         parts: nonEmptyParts,
         quantities: nonEmptyQuantities,
         customer_details: customerDetails || null,
+        customer_id: formCustomerId || null,
         status: 'open'
       })
       .select()
@@ -104,6 +173,7 @@ export default function AdminPage() {
       setParts(['', '', ''])
       setQuantities([1, 1, 1])
       setCustomerDetails('')
+      setFormCustomerId(null)
       setShowForm(false)
       fetchRequests()
     }
@@ -252,6 +322,89 @@ export default function AdminPage() {
                   className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-red-300"
                 />
               </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Customer (Optional)</label>
+                <div className="flex gap-2 items-end">
+                  <select
+                    value={formCustomerId || ''}
+                    onChange={e => {
+                      if (e.target.value) {
+                        selectCustomerForForm(e.target.value)
+                      } else {
+                        setFormCustomerId(null)
+                        setCustomerDetails('')
+                      }
+                    }}
+                    className="flex-1 border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-red-300"
+                  >
+                    <option value="">Select a customer...</option>
+                    {customers.map(customer => (
+                      <option key={customer.id} value={customer.id}>
+                        {customer.name} {customer.company ? `(${customer.company})` : ''}
+                      </option>
+                    ))}
+                  </select>
+                  <button
+                    type="button"
+                    onClick={() => setShowAddCustomer(!showAddCustomer)}
+                    className="text-sm border border-gray-300 rounded-lg px-3 py-2 hover:bg-gray-50 transition text-gray-700 font-medium whitespace-nowrap"
+                  >
+                    {showAddCustomer ? '− Cancel' : '+ New'}
+                  </button>
+                </div>
+              </div>
+
+              {showAddCustomer && (
+                <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 space-y-3">
+                  <p className="text-sm font-semibold text-blue-900 mb-3">Add New Customer</p>
+                  <input
+                    type="text"
+                    placeholder="Customer name *"
+                    value={newCustomerName}
+                    onChange={e => setNewCustomerName(e.target.value)}
+                    required
+                    className="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-300"
+                  />
+                  <input
+                    type="text"
+                    placeholder="Company name (optional)"
+                    value={newCustomerCompany}
+                    onChange={e => setNewCustomerCompany(e.target.value)}
+                    className="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-300"
+                  />
+                  <input
+                    type="email"
+                    placeholder="Email (optional)"
+                    value={newCustomerEmail}
+                    onChange={e => setNewCustomerEmail(e.target.value)}
+                    className="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-300"
+                  />
+                  <input
+                    type="tel"
+                    placeholder="Phone (optional)"
+                    value={newCustomerPhone}
+                    onChange={e => setNewCustomerPhone(e.target.value)}
+                    className="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-300"
+                  />
+                  <textarea
+                    placeholder="Notes (optional)"
+                    value={newCustomerNotes}
+                    onChange={e => setNewCustomerNotes(e.target.value)}
+                    rows={2}
+                    className="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-300 resize-none"
+                  />
+                  <button
+                    type="button"
+                    onClick={handleAddCustomer}
+                    disabled={addingCustomer || !newCustomerName.trim()}
+                    className="w-full bg-blue-600 text-white text-sm font-medium px-3 py-2 rounded-lg hover:bg-blue-700 transition disabled:opacity-60"
+                  >
+                    {addingCustomer ? 'Adding...' : 'Add Customer'}
+                  </button>
+                </div>
+              )}
+
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">Parts</label>
                 <div className="overflow-x-auto border border-gray-300 rounded-lg">
