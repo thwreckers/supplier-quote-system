@@ -52,6 +52,10 @@ export default function AdminRequestDetail() {
   const [newFieldOptions, setNewFieldOptions] = useState('')
   const [savingFields, setSavingFields] = useState(false)
 
+  // Per-part selection state (maps part_index -> quote_id)
+  const [selectedParts, setSelectedParts] = useState<{ [partIdx: number]: string }>({})
+  const [savingSelection, setSavingSelection] = useState(false)
+
   // Disable page scroll when lightbox is open
   useEffect(() => {
     if (lightboxOpen) {
@@ -78,6 +82,14 @@ export default function AdminRequestDetail() {
       setRequest(req)
       if (req?.custom_fields) {
         setCustomFields(req.custom_fields)
+      }
+      // Initialize selected parts from request data
+      if (req?.selected_suppliers) {
+        const partsMap: { [partIdx: number]: string } = {}
+        req.selected_suppliers.forEach((supplier) => {
+          partsMap[supplier.part_index] = supplier.quote_id
+        })
+        setSelectedParts(partsMap)
       }
       // Fetch group link clicks if group_id exists
       if (req?.group_id) {
@@ -396,6 +408,46 @@ export default function AdminRequestDetail() {
   function getQuoteFieldValue(quote: Quote, fieldId: string): string | undefined {
     if (!quote.quote_fields) return undefined
     return quote.quote_fields.find(f => f.field_id === fieldId)?.value
+  }
+
+  async function savePartSelection(partIdx: number, quoteId: string) {
+    if (!request) return
+
+    const updatedSelection = { ...selectedParts }
+    if (updatedSelection[partIdx] === quoteId) {
+      // Deselect if clicking same option
+      delete updatedSelection[partIdx]
+    } else {
+      updatedSelection[partIdx] = quoteId
+    }
+
+    // Convert map to array format for database
+    const selectedSuppliers = Object.entries(updatedSelection).map(([partIdx, quoteId]) => {
+      const quote = quotes.find(q => q.id === quoteId)
+      const price = quote?.quote_fields?.[parseInt(partIdx)]
+        ? JSON.parse(quote.quote_fields[parseInt(partIdx)].value).price || '0'
+        : '0'
+
+      return {
+        part_index: parseInt(partIdx),
+        quote_id: quoteId,
+        price: parseFloat(price),
+      }
+    })
+
+    setSavingSelection(true)
+    const { error } = await getSupabase()
+      .from('requests')
+      .update({ selected_suppliers: selectedSuppliers })
+      .eq('id', id)
+
+    if (!error) {
+      setSelectedParts(updatedSelection)
+      if (request) {
+        setRequest({ ...request, selected_suppliers: selectedSuppliers })
+      }
+    }
+    setSavingSelection(false)
   }
 
   async function exportPDF() {
@@ -789,9 +841,10 @@ export default function AdminRequestDetail() {
                           <table className="w-full">
                             <thead>
                               <tr className="bg-gray-50 border-b border-gray-200">
-                                <th className="text-left px-2 py-1 font-medium text-gray-600 w-1/2">Part</th>
-                                <th className="text-left px-2 py-1 font-medium text-gray-600 w-1/4">Price</th>
-                                <th className="text-left px-2 py-1 font-medium text-gray-600 w-1/4">Notes</th>
+                                <th className="text-left px-2 py-1 font-medium text-gray-600 w-2/5">Part</th>
+                                <th className="text-left px-2 py-1 font-medium text-gray-600 w-1/5">Price</th>
+                                <th className="text-left px-2 py-1 font-medium text-gray-600 w-1/5">Notes</th>
+                                <th className="text-center px-2 py-1 font-medium text-gray-600 w-1/5">Select</th>
                               </tr>
                             </thead>
                             <tbody>
@@ -807,11 +860,21 @@ export default function AdminRequestDetail() {
                                     // Fallback if parsing fails
                                   }
                                 }
+                                const isSelected = selectedParts[partIdx] === quote.id
                                 return (
-                                  <tr key={partIdx} className={partIdx !== request.parts!.length - 1 ? 'border-b border-gray-200' : ''}>
+                                  <tr key={partIdx} className={`${isSelected ? 'bg-green-50' : ''} ${partIdx !== request.parts!.length - 1 ? 'border-b border-gray-200' : ''}`}>
                                     <td className="px-2 py-1 text-gray-900">{part}</td>
                                     <td className="px-2 py-1 text-gray-900">${Number(partPrice).toFixed(2)}</td>
                                     <td className="px-2 py-1 text-gray-600">{partNotes}</td>
+                                    <td className="px-2 py-1 text-center">
+                                      <input
+                                        type="checkbox"
+                                        checked={isSelected}
+                                        onChange={() => savePartSelection(partIdx, quote.id)}
+                                        disabled={savingSelection}
+                                        className="cursor-pointer disabled:opacity-60"
+                                      />
+                                    </td>
                                   </tr>
                                 )
                               })}
