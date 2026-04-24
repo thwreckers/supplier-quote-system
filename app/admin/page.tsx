@@ -355,6 +355,53 @@ export default function AdminPage() {
                 </div>
               </div>
 
+              {formCustomerId && (
+                <div className="border border-gray-200 rounded-lg overflow-hidden">
+                  <table className="w-full text-sm">
+                    <tbody>
+                      <tr className="border-b border-gray-200">
+                        <td className="px-3 py-2 font-medium text-gray-600 bg-gray-50 w-1/4">Name</td>
+                        <td className="px-3 py-2 text-gray-900">
+                          {customers.find(c => c.id === formCustomerId)?.name}
+                        </td>
+                      </tr>
+                      {customers.find(c => c.id === formCustomerId)?.company && (
+                        <tr className="border-b border-gray-200">
+                          <td className="px-3 py-2 font-medium text-gray-600 bg-gray-50 w-1/4">Company</td>
+                          <td className="px-3 py-2 text-gray-900">
+                            {customers.find(c => c.id === formCustomerId)?.company}
+                          </td>
+                        </tr>
+                      )}
+                      {customers.find(c => c.id === formCustomerId)?.email && (
+                        <tr className="border-b border-gray-200">
+                          <td className="px-3 py-2 font-medium text-gray-600 bg-gray-50 w-1/4">Email</td>
+                          <td className="px-3 py-2 text-gray-900">
+                            {customers.find(c => c.id === formCustomerId)?.email}
+                          </td>
+                        </tr>
+                      )}
+                      {customers.find(c => c.id === formCustomerId)?.phone && (
+                        <tr className="border-b border-gray-200">
+                          <td className="px-3 py-2 font-medium text-gray-600 bg-gray-50 w-1/4">Phone</td>
+                          <td className="px-3 py-2 text-gray-900">
+                            {customers.find(c => c.id === formCustomerId)?.phone}
+                          </td>
+                        </tr>
+                      )}
+                      {customers.find(c => c.id === formCustomerId)?.notes && (
+                        <tr>
+                          <td className="px-3 py-2 font-medium text-gray-600 bg-gray-50 w-1/4">Notes</td>
+                          <td className="px-3 py-2 text-gray-900 whitespace-pre-wrap">
+                            {customers.find(c => c.id === formCustomerId)?.notes}
+                          </td>
+                        </tr>
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+
               {showAddCustomer && (
                 <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 space-y-3">
                   <p className="text-sm font-semibold text-blue-900 mb-3">Add New Customer</p>
