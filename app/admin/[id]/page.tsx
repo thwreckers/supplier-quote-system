@@ -453,11 +453,71 @@ export default function AdminRequestDetail() {
   async function exportPDF() {
     const html2pdf = (await import('html2pdf.js')).default
 
+    // Build breakdown table with selected suppliers
+    let breakdownTableHtml = ''
+    let grandTotal = 0
+
+    if (request?.parts && request.parts.length > 0) {
+      const breakdownRows = request.parts.map((part, partIdx) => {
+        const selectedQuoteId = selectedParts[partIdx]
+        const quote = quotes.find(q => q.id === selectedQuoteId)
+        let partPrice = '0'
+        if (quote && quote.quote_fields && quote.quote_fields[partIdx]) {
+          try {
+            const parsed = JSON.parse(quote.quote_fields[partIdx].value)
+            partPrice = parsed.price || '0'
+          } catch (e) {
+            // Fallback
+          }
+        }
+        const qty = request.quantities?.[partIdx] || 1
+        const unitPrice = parseFloat(partPrice)
+        const totalPartPrice = unitPrice * qty
+        grandTotal += totalPartPrice
+
+        return `
+          <tr>
+            <td style="border: 1px solid #ddd; padding: 8px;">${part}</td>
+            <td style="border: 1px solid #ddd; padding: 8px; text-align: center;">${qty}</td>
+            <td style="border: 1px solid #ddd; padding: 8px;">${quote?.supplier_name || 'Not selected'}</td>
+            <td style="border: 1px solid #ddd; padding: 8px; text-align: right;">$${unitPrice.toFixed(2)}</td>
+            <td style="border: 1px solid #ddd; padding: 8px; text-align: right;">$${totalPartPrice.toFixed(2)}</td>
+          </tr>
+        `
+      }).join('')
+
+      breakdownTableHtml = `
+        <h2 style="margin-top: 30px; margin-bottom: 10px; font-size: 16px; font-weight: bold;">Quote Breakdown</h2>
+        <table style="width: 100%; border-collapse: collapse;">
+          <thead>
+            <tr style="background-color: #f0f0f0;">
+              <th style="border: 1px solid #ddd; padding: 8px; text-align: left;">Part</th>
+              <th style="border: 1px solid #ddd; padding: 8px; text-align: center;">Qty</th>
+              <th style="border: 1px solid #ddd; padding: 8px; text-align: left;">Supplier</th>
+              <th style="border: 1px solid #ddd; padding: 8px; text-align: right;">Unit Price</th>
+              <th style="border: 1px solid #ddd; padding: 8px; text-align: right;">Total</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${breakdownRows}
+            <tr style="background-color: #f9f9f9; font-weight: bold;">
+              <td colspan="4" style="border: 1px solid #ddd; padding: 8px; text-align: right;">Grand Total:</td>
+              <td style="border: 1px solid #ddd; padding: 8px; text-align: right;">$${grandTotal.toFixed(2)}</td>
+            </tr>
+          </tbody>
+        </table>
+      `
+    }
+
     const element = document.createElement('div')
     element.innerHTML = `
       <h1 style="text-align: center; margin-bottom: 10px;">${request?.title || 'Quotes'}</h1>
       ${request?.description ? `<p style="text-align: center; margin-bottom: 20px; color: #666;">${request.description}</p>` : ''}
       <p style="margin-bottom: 20px; color: #999; font-size: 12px;">Exported: ${new Date().toLocaleDateString('en-AU')}</p>
+
+      ${breakdownTableHtml}
+
+      <h2 style="margin-top: 30px; margin-bottom: 10px; font-size: 16px; font-weight: bold;">All Quotes</h2>
       <table style="width: 100%; border-collapse: collapse;">
         <thead>
           <tr style="background-color: #f0f0f0;">
@@ -484,7 +544,7 @@ export default function AdminRequestDetail() {
 
     const opt: any = {
       margin: 10,
-      filename: `${request?.title || 'quotes'}.pdf`,
+      filename: `${request?.title || 'quotes'}-breakdown.pdf`,
       image: { type: 'jpeg', quality: 0.98 },
       html2canvas: { scale: 2 },
       jsPDF: { orientation: 'portrait', unit: 'mm', format: 'a4' },
