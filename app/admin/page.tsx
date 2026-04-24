@@ -31,6 +31,10 @@ export default function AdminPage() {
   const [newCustomerNotes, setNewCustomerNotes] = useState('')
   const [addingCustomer, setAddingCustomer] = useState(false)
 
+  // Delete request state
+  const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null)
+  const [deletingId, setDeletingId] = useState<string | null>(null)
+
   async function fetchRequests() {
     const db = getSupabase()
 
@@ -71,6 +75,22 @@ export default function AdminPage() {
     setRefreshing(true)
     await fetchRequests()
     setRefreshing(false)
+  }
+
+  async function deleteRequest(requestId: string) {
+    setDeletingId(requestId)
+    const { error } = await getSupabase()
+      .from('requests')
+      .delete()
+      .eq('id', requestId)
+
+    if (!error) {
+      setRequests(requests.filter(r => r.id !== requestId))
+      setDeleteConfirmId(null)
+    } else {
+      setError(error.message)
+    }
+    setDeletingId(null)
   }
 
   function selectCustomerForForm(customerId: string) {
@@ -541,40 +561,73 @@ export default function AdminPage() {
           ) : (
             <div className="space-y-3">
               {filteredRequests.map(req => (
-                <Link key={req.id} href={`/admin/${req.id}`}>
-                  <div className="bg-white rounded-lg border border-gray-200 p-4 hover:border-red-300 hover:shadow-sm transition cursor-pointer">
-                    <div className="flex items-start justify-between gap-2">
-                      <div className="flex-1">
-                        <p className="font-medium text-gray-900 text-sm">{req.title}</p>
-                        {req.description && (
-                          <p className="text-xs text-gray-500 mt-0.5 line-clamp-1">{req.description}</p>
-                        )}
-                        {req.customer_id && customers.find(c => c.id === req.customer_id) && (
-                          <p className="text-xs text-blue-600 mt-1">
-                            👤 {customers.find(c => c.id === req.customer_id)?.name}
-                          </p>
-                        )}
-                        <p className="text-xs text-gray-400 mt-1">{formatDate(req.created_at)}</p>
-                      </div>
-                      <div className="flex items-center gap-2 shrink-0">
-                        <span
-                          className={`text-xs font-medium px-2 py-0.5 rounded-full ${
-                            req.status === 'open'
-                              ? 'bg-green-100 text-green-700'
-                              : 'bg-gray-100 text-gray-500'
-                          }`}
+                <div key={req.id}>
+                  {deleteConfirmId === req.id ? (
+                    <div className="bg-red-50 border border-red-300 rounded-lg p-4">
+                      <p className="text-sm font-semibold text-red-900 mb-3">Delete "{req.title}"?</p>
+                      <div className="flex gap-2">
+                        <button
+                          onClick={() => deleteRequest(req.id)}
+                          disabled={deletingId === req.id}
+                          className="flex-1 bg-red-600 text-white text-sm font-medium px-3 py-2 rounded hover:bg-red-700 transition disabled:opacity-60"
                         >
-                          {req.status}
-                        </span>
-                        {quoteCounts[req.id] > 0 && (
-                          <span className="text-xs font-bold bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full">
-                            +{quoteCounts[req.id]} quote{quoteCounts[req.id] !== 1 ? 's' : ''}
-                          </span>
-                        )}
+                          {deletingId === req.id ? 'Deleting...' : 'Delete'}
+                        </button>
+                        <button
+                          onClick={() => setDeleteConfirmId(null)}
+                          className="flex-1 bg-white border border-red-300 text-red-600 text-sm font-medium px-3 py-2 rounded hover:bg-red-50 transition"
+                        >
+                          Cancel
+                        </button>
                       </div>
                     </div>
-                  </div>
-                </Link>
+                  ) : (
+                    <Link href={`/admin/${req.id}`}>
+                      <div className="bg-white rounded-lg border border-gray-200 p-4 hover:border-red-300 hover:shadow-sm transition cursor-pointer">
+                        <div className="flex items-start justify-between gap-2">
+                          <div className="flex-1">
+                            <p className="font-medium text-gray-900 text-sm">{req.title}</p>
+                            {req.description && (
+                              <p className="text-xs text-gray-500 mt-0.5 line-clamp-1">{req.description}</p>
+                            )}
+                            {req.customer_id && customers.find(c => c.id === req.customer_id) && (
+                              <p className="text-xs text-blue-600 mt-1">
+                                👤 {customers.find(c => c.id === req.customer_id)?.name}
+                              </p>
+                            )}
+                            <p className="text-xs text-gray-400 mt-1">{formatDate(req.created_at)}</p>
+                          </div>
+                          <div className="flex items-center gap-2 shrink-0">
+                            <span
+                              className={`text-xs font-medium px-2 py-0.5 rounded-full ${
+                                req.status === 'open'
+                                  ? 'bg-green-100 text-green-700'
+                                  : 'bg-gray-100 text-gray-500'
+                              }`}
+                            >
+                              {req.status}
+                            </span>
+                            {quoteCounts[req.id] > 0 && (
+                              <span className="text-xs font-bold bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full">
+                                +{quoteCounts[req.id]} quote{quoteCounts[req.id] !== 1 ? 's' : ''}
+                              </span>
+                            )}
+                            <button
+                              onClick={(e) => {
+                                e.preventDefault()
+                                e.stopPropagation()
+                                setDeleteConfirmId(req.id)
+                              }}
+                              className="text-xs text-red-600 hover:text-red-800 font-medium px-2 py-1 rounded hover:bg-red-50 transition"
+                            >
+                              ✕
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    </Link>
+                  )}
+                </div>
               ))}
             </div>
           )}
