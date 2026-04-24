@@ -75,6 +75,16 @@ export default function AdminPage() {
   // Bulk selection state
   const [selectedRequests, setSelectedRequests] = useState<Set<string>>(new Set())
   const [bulkDeleting, setBulkDeleting] = useState(false)
+  const [bulkClosing, setBulkClosing] = useState(false)
+
+  // Edit customer state
+  const [editingCustomerId, setEditingCustomerId] = useState<string | null>(null)
+  const [editCustomerName, setEditCustomerName] = useState('')
+  const [editCustomerCompany, setEditCustomerCompany] = useState('')
+  const [editCustomerEmail, setEditCustomerEmail] = useState('')
+  const [editCustomerPhone, setEditCustomerPhone] = useState('')
+  const [editCustomerNotes, setEditCustomerNotes] = useState('')
+  const [savingCustomer, setSavingCustomer] = useState(false)
 
   async function fetchRequests() {
     const db = getSupabase()
@@ -167,6 +177,82 @@ export default function AdminPage() {
       setError(error.message)
     }
     setBulkDeleting(false)
+  }
+
+  async function bulkCloseRequests() {
+    setBulkClosing(true)
+    const { error } = await getSupabase()
+      .from('requests')
+      .update({ status: 'closed' })
+      .in('id', Array.from(selectedRequests))
+
+    if (!error) {
+      setRequests(requests.map(r =>
+        selectedRequests.has(r.id) ? { ...r, status: 'closed' } : r
+      ))
+      setSelectedRequests(new Set())
+    } else {
+      setError(error.message)
+    }
+    setBulkClosing(false)
+  }
+
+  function startEditCustomer(customerId: string) {
+    const customer = customers.find(c => c.id === customerId)
+    if (customer) {
+      setEditingCustomerId(customerId)
+      setEditCustomerName(customer.name)
+      setEditCustomerCompany(customer.company || '')
+      setEditCustomerEmail(customer.email || '')
+      setEditCustomerPhone(customer.phone || '')
+      setEditCustomerNotes(customer.notes || '')
+    }
+  }
+
+  async function saveCustomerEdit() {
+    if (!editingCustomerId || !editCustomerName.trim()) {
+      setError('Customer name is required')
+      return
+    }
+
+    setSavingCustomer(true)
+    const { error: err } = await getSupabase()
+      .from('customers')
+      .update({
+        name: editCustomerName,
+        company: editCustomerCompany || null,
+        email: editCustomerEmail || null,
+        phone: editCustomerPhone || null,
+        notes: editCustomerNotes || null,
+      })
+      .eq('id', editingCustomerId)
+
+    if (err) {
+      setError(err.message)
+    } else {
+      // Update local customers list
+      const updatedCustomers = customers.map(c =>
+        c.id === editingCustomerId
+          ? {
+              ...c,
+              name: editCustomerName,
+              company: editCustomerCompany || null,
+              email: editCustomerEmail || null,
+              phone: editCustomerPhone || null,
+              notes: editCustomerNotes || null,
+            }
+          : c
+      )
+      setCustomers(updatedCustomers)
+
+      // Re-select the customer to refresh the display
+      if (formCustomerId === editingCustomerId) {
+        selectCustomerForForm(editingCustomerId)
+      }
+
+      setEditingCustomerId(null)
+    }
+    setSavingCustomer(false)
   }
 
   function selectCustomerForForm(customerId: string) {
@@ -442,6 +528,15 @@ export default function AdminPage() {
                       </option>
                     ))}
                   </select>
+                  {formCustomerId && (
+                    <button
+                      type="button"
+                      onClick={() => startEditCustomer(formCustomerId)}
+                      className="text-sm border border-gray-300 rounded-lg px-3 py-2 hover:bg-gray-50 transition text-gray-700 font-medium whitespace-nowrap"
+                    >
+                      ✎ Edit
+                    </button>
+                  )}
                   <button
                     type="button"
                     onClick={() => setShowAddCustomer(!showAddCustomer)}
@@ -549,6 +644,64 @@ export default function AdminPage() {
                 </div>
               )}
 
+              {editingCustomerId && (
+                <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 space-y-3">
+                  <p className="text-sm font-semibold text-amber-900 mb-3">Edit Customer</p>
+                  <input
+                    type="text"
+                    placeholder="Customer name *"
+                    value={editCustomerName}
+                    onChange={e => setEditCustomerName(e.target.value)}
+                    className="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-amber-300"
+                  />
+                  <input
+                    type="text"
+                    placeholder="Company name (optional)"
+                    value={editCustomerCompany}
+                    onChange={e => setEditCustomerCompany(e.target.value)}
+                    className="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-amber-300"
+                  />
+                  <input
+                    type="email"
+                    placeholder="Email (optional)"
+                    value={editCustomerEmail}
+                    onChange={e => setEditCustomerEmail(e.target.value)}
+                    className="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-amber-300"
+                  />
+                  <input
+                    type="tel"
+                    placeholder="Phone (optional)"
+                    value={editCustomerPhone}
+                    onChange={e => setEditCustomerPhone(e.target.value)}
+                    className="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-amber-300"
+                  />
+                  <textarea
+                    placeholder="Notes (optional)"
+                    value={editCustomerNotes}
+                    onChange={e => setEditCustomerNotes(e.target.value)}
+                    rows={2}
+                    className="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-amber-300 resize-none"
+                  />
+                  <div className="flex gap-2">
+                    <button
+                      type="button"
+                      onClick={saveCustomerEdit}
+                      disabled={savingCustomer}
+                      className="flex-1 bg-amber-600 text-white text-sm font-medium px-3 py-2 rounded-lg hover:bg-amber-700 transition disabled:opacity-60"
+                    >
+                      {savingCustomer ? 'Saving...' : 'Save Changes'}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setEditingCustomerId(null)}
+                      className="flex-1 bg-white border border-amber-300 text-amber-600 text-sm font-medium px-3 py-2 rounded-lg hover:bg-amber-50 transition"
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                </div>
+              )}
+
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">Parts</label>
                 <div className="overflow-x-auto border border-gray-300 rounded-lg">
@@ -604,16 +757,6 @@ export default function AdminPage() {
                   + Add Row
                 </button>
               </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Customer Details (Admin Only)</label>
-                <textarea
-                  placeholder="Customer name, contact info, internal notes, etc..."
-                  value={customerDetails}
-                  onChange={e => setCustomerDetails(e.target.value)}
-                  rows={2}
-                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-red-300 resize-none"
-                />
-              </div>
               <button
                 type="submit"
                 disabled={submitting}
@@ -648,6 +791,13 @@ export default function AdminPage() {
                       className="text-sm border border-blue-300 rounded px-3 py-1 hover:bg-blue-100 transition text-blue-700"
                     >
                       Clear
+                    </button>
+                    <button
+                      onClick={bulkCloseRequests}
+                      disabled={bulkClosing}
+                      className="text-sm bg-gray-600 text-white rounded px-3 py-1 hover:bg-gray-700 transition font-medium disabled:opacity-60"
+                    >
+                      {bulkClosing ? 'Closing...' : 'Close Selected'}
                     </button>
                     <button
                       onClick={() => setDeleteConfirmId('bulk')}
