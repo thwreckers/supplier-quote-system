@@ -4,6 +4,43 @@ import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { getSupabase, type Request, type Customer } from '@/lib/supabase'
 
+const checkboxStyles = `
+  input[type="checkbox"].styled-checkbox {
+    appearance: none;
+    width: 20px;
+    height: 20px;
+    border: 2px solid #d1d5db;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: all 0.2s;
+    background: white;
+  }
+
+  input[type="checkbox"].styled-checkbox:hover {
+    border-color: #9ca3af;
+  }
+
+  input[type="checkbox"].styled-checkbox:checked {
+    background-color: #d32f2f;
+    border-color: #d32f2f;
+    background-image: url("data:image/svg+xml,%3csvg viewBox='0 0 16 16' fill='white' xmlns='http://www.w3.org/2000/svg'%3e%3cpath d='M12.207 4.793a1 1 0 010 1.414l-5 5a1 1 0 01-1.414 0l-2-2a1 1 0 011.414-1.414L6.5 9.086l4.293-4.293a1 1 0 011.414 0z'/%3e%3c/svg%3e");
+    background-repeat: no-repeat;
+    background-position: center;
+    background-size: 100%;
+  }
+
+  input[type="checkbox"].styled-checkbox:checked:hover {
+    background-color: #b71c1c;
+    border-color: #b71c1c;
+  }
+
+  input[type="checkbox"].styled-checkbox:focus {
+    outline: none;
+    ring: 2px;
+    ring-color: #fecaca;
+  }
+`
+
 export default function AdminPage() {
   const [requests, setRequests] = useState<Request[]>([])
   const [customers, setCustomers] = useState<Customer[]>([])
@@ -261,6 +298,7 @@ export default function AdminPage() {
 
   return (
     <div className="min-h-screen bg-gray-100">
+      <style>{checkboxStyles}</style>
       {/* Header */}
       <header style={{ backgroundColor: '#d32f2f' }} className="text-white px-4 py-4 shadow">
         <div className="max-w-6xl mx-auto flex items-center justify-between">
@@ -650,7 +688,7 @@ export default function AdminPage() {
                     type="checkbox"
                     checked={selectedRequests.size > 0 && selectedRequests.size === filteredRequests.length}
                     onChange={toggleSelectAll}
-                    className="cursor-pointer w-4 h-4"
+                    className="styled-checkbox"
                   />
                   <label className="text-xs text-gray-600 font-medium cursor-pointer">
                     {selectedRequests.size === filteredRequests.length && filteredRequests.length > 0
@@ -665,7 +703,7 @@ export default function AdminPage() {
                     checked={selectedRequests.has(req.id)}
                     onChange={() => toggleRequestSelection(req.id)}
                     onClick={(e) => e.stopPropagation()}
-                    className="cursor-pointer w-4 h-4 mt-1 shrink-0"
+                    className="styled-checkbox mt-1 shrink-0"
                   />
                   <div className="flex-1">
                     {deleteConfirmId === req.id ? (
