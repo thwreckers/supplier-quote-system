@@ -497,6 +497,31 @@ export default function AdminRequestDetail() {
                   <p className="whitespace-pre-wrap">{request.customer_details}</p>
                 </div>
               )}
+
+              {request?.parts && request.parts.length > 0 && (
+                <div className="mt-3 pt-3 border-t border-gray-200">
+                  <p className="text-sm font-semibold text-gray-800 mb-3">Parts Requested ({request.parts.length})</p>
+                  <div className="overflow-x-auto border border-gray-200 rounded">
+                    <table className="w-full text-sm">
+                      <thead>
+                        <tr className="bg-gray-50 border-b border-gray-200">
+                          <th className="text-left px-3 py-2 font-medium text-gray-600 w-3/4">Part</th>
+                          <th className="text-left px-3 py-2 font-medium text-gray-600 w-1/4">Qty</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {request.parts.map((part, idx) => (
+                          <tr key={idx} className={idx !== request.parts!.length - 1 ? 'border-b border-gray-200' : ''}>
+                            <td className="px-3 py-2 text-gray-900">{part}</td>
+                            <td className="px-3 py-2 text-gray-900">{request.quantities?.[idx] || 1}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              )}
+
               <p className="text-xs text-gray-400 mt-2">Created {formatDate(request.created_at)}</p>
 
               {editingExpiry ? (

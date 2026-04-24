@@ -13,6 +13,7 @@ export default function AdminPage() {
   const [showForm, setShowForm] = useState(false)
   const [title, setTitle] = useState('')
   const [parts, setParts] = useState<string[]>(['', '', ''])
+  const [quantities, setQuantities] = useState<number[]>([1, 1, 1])
   const [customerDetails, setCustomerDetails] = useState('')
   const [submitting, setSubmitting] = useState(false)
   const [newLink, setNewLink] = useState<string | null>(null)
@@ -80,12 +81,15 @@ export default function AdminPage() {
       return
     }
 
+    const nonEmptyQuantities = quantities.slice(0, nonEmptyParts.length)
+
     const { data, error } = await getSupabase()
       .from('requests')
       .insert({
         title,
         description: '',
         parts: nonEmptyParts,
+        quantities: nonEmptyQuantities,
         customer_details: customerDetails || null,
         status: 'open'
       })
@@ -98,6 +102,7 @@ export default function AdminPage() {
       setNewLink(link)
       setTitle('')
       setParts(['', '', ''])
+      setQuantities([1, 1, 1])
       setCustomerDetails('')
       setShowForm(false)
       fetchRequests()
@@ -249,30 +254,54 @@ export default function AdminPage() {
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">Parts</label>
-                <table className="w-full border border-gray-300 rounded-lg overflow-hidden">
-                  <tbody>
-                    {parts.map((part, idx) => (
-                      <tr key={idx} className={idx !== parts.length - 1 ? 'border-b border-gray-300' : ''}>
-                        <td className="p-2 w-full">
-                          <input
-                            type="text"
-                            placeholder={`Part ${idx + 1}`}
-                            value={part}
-                            onChange={e => {
-                              const newParts = [...parts]
-                              newParts[idx] = e.target.value
-                              setParts(newParts)
-                            }}
-                            className="w-full border border-gray-300 rounded px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-red-300"
-                          />
-                        </td>
+                <div className="overflow-x-auto border border-gray-300 rounded-lg">
+                  <table className="w-full">
+                    <thead>
+                      <tr className="bg-gray-50 border-b border-gray-300">
+                        <th className="text-left px-3 py-2 text-xs font-medium text-gray-600 w-3/4">Part</th>
+                        <th className="text-left px-3 py-2 text-xs font-medium text-gray-600 w-1/4">Qty</th>
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
+                    </thead>
+                    <tbody>
+                      {parts.map((part, idx) => (
+                        <tr key={idx} className={idx !== parts.length - 1 ? 'border-b border-gray-300' : ''}>
+                          <td className="p-2">
+                            <input
+                              type="text"
+                              placeholder={`Part ${idx + 1}`}
+                              value={part}
+                              onChange={e => {
+                                const newParts = [...parts]
+                                newParts[idx] = e.target.value
+                                setParts(newParts)
+                              }}
+                              className="w-full border border-gray-300 rounded px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-red-300"
+                            />
+                          </td>
+                          <td className="p-2">
+                            <input
+                              type="number"
+                              min="1"
+                              value={quantities[idx] || 1}
+                              onChange={e => {
+                                const newQtys = [...quantities]
+                                newQtys[idx] = Math.max(1, parseInt(e.target.value) || 1)
+                                setQuantities(newQtys)
+                              }}
+                              className="w-full border border-gray-300 rounded px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-red-300"
+                            />
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
                 <button
                   type="button"
-                  onClick={() => setParts([...parts, ''])}
+                  onClick={() => {
+                    setParts([...parts, ''])
+                    setQuantities([...quantities, 1])
+                  }}
                   className="mt-2 text-xs text-blue-600 hover:text-blue-800 font-medium"
                 >
                   + Add Row

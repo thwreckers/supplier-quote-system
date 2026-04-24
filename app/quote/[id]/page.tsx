@@ -164,10 +164,11 @@ export default function SupplierQuotePage() {
       }),
     })) || []
 
-    // Calculate total price from all parts
+    // Calculate total price from all parts (quantity × price per part)
     const totalPrice = request?.parts?.reduce((sum, _, idx) => {
+      const qty = request?.quantities?.[idx] || 1
       const price = parseFloat(partPrices[idx] || '0')
-      return sum + (isNaN(price) ? 0 : price)
+      return sum + (isNaN(price) ? 0 : price * qty)
     }, 0) || 0
 
     const { data: newQuote, error: insertError } = await getSupabase()
@@ -408,18 +409,20 @@ export default function SupplierQuotePage() {
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">Quote Details</label>
                 <div className="overflow-x-auto border border-gray-300 rounded-lg">
-                  <table className="w-full">
+                  <table className="w-full text-sm">
                     <thead>
                       <tr className="bg-gray-50 border-b border-gray-300">
-                        <th className="text-left px-3 py-2 text-sm font-medium text-gray-700 w-1/2">Part</th>
-                        <th className="text-left px-3 py-2 text-sm font-medium text-gray-700 w-1/4">Price (AUD)</th>
-                        <th className="text-left px-3 py-2 text-sm font-medium text-gray-700 w-1/4">Notes</th>
+                        <th className="text-left px-3 py-2 font-medium text-gray-700 w-2/5">Part</th>
+                        <th className="text-left px-3 py-2 font-medium text-gray-700 w-1/8">Qty</th>
+                        <th className="text-left px-3 py-2 font-medium text-gray-700 w-1/4">Price (AUD)</th>
+                        <th className="text-left px-3 py-2 font-medium text-gray-700 w-1/4">Notes</th>
                       </tr>
                     </thead>
                     <tbody>
                       {request.parts.map((part, idx) => (
                         <tr key={idx} className={idx !== request.parts!.length - 1 ? 'border-b border-gray-200' : ''}>
-                          <td className="px-3 py-2 text-sm text-gray-900">{part}</td>
+                          <td className="px-3 py-2 text-gray-900">{part}</td>
+                          <td className="px-3 py-2 text-gray-900 font-medium">{request.quantities?.[idx] || 1}</td>
                           <td className="px-3 py-2">
                             <div className="relative">
                               <span className="absolute left-2 top-1/2 -translate-y-1/2 text-gray-500 text-sm">$</span>
@@ -438,7 +441,7 @@ export default function SupplierQuotePage() {
                           <td className="px-3 py-2">
                             <input
                               type="text"
-                              placeholder="e.g. New, LED, Small scratch"
+                              placeholder="e.g. New, LED, Black"
                               value={partNotes[idx] || ''}
                               onChange={e => setPartNotes({ ...partNotes, [idx]: e.target.value })}
                               className="w-full border border-gray-300 rounded px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-red-300"

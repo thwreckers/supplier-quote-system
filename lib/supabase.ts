@@ -35,6 +35,12 @@ export type QuoteField = {
   value: string
 }
 
+export type SelectedSupplier = {
+  part_index: number
+  quote_id: string
+  price: number
+}
+
 export type Request = {
   id: string
   created_at: string
@@ -47,6 +53,8 @@ export type Request = {
   group_id: string | null
   custom_fields: CustomField[] | null
   parts: string[] | null
+  quantities: number[] | null
+  selected_suppliers: SelectedSupplier[] | null
 }
 
 export type Quote = {
