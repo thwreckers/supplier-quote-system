@@ -12,7 +12,7 @@ export default function AdminPage() {
   const [refreshing, setRefreshing] = useState(false)
   const [showForm, setShowForm] = useState(false)
   const [title, setTitle] = useState('')
-  const [description, setDescription] = useState('')
+  const [parts, setParts] = useState<string[]>(['', '', ''])
   const [customerDetails, setCustomerDetails] = useState('')
   const [submitting, setSubmitting] = useState(false)
   const [newLink, setNewLink] = useState<string | null>(null)
@@ -70,11 +70,22 @@ export default function AdminPage() {
     e.preventDefault()
     setSubmitting(true)
     setError(null)
+
+    // Filter out empty parts
+    const nonEmptyParts = parts.filter(p => p.trim() !== '')
+
+    if (nonEmptyParts.length === 0) {
+      setError('Please add at least one part')
+      setSubmitting(false)
+      return
+    }
+
     const { data, error } = await getSupabase()
       .from('requests')
       .insert({
         title,
-        description,
+        description: '',
+        parts: nonEmptyParts,
         customer_details: customerDetails || null,
         status: 'open'
       })
@@ -86,7 +97,7 @@ export default function AdminPage() {
       const link = `${window.location.origin}/quote/${data.id}`
       setNewLink(link)
       setTitle('')
-      setDescription('')
+      setParts(['', '', ''])
       setCustomerDetails('')
       setShowForm(false)
       fetchRequests()
@@ -237,14 +248,35 @@ export default function AdminPage() {
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
-                <textarea
-                  placeholder="Part details, condition requirements, notes for suppliers..."
-                  value={description}
-                  onChange={e => setDescription(e.target.value)}
-                  rows={3}
-                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-red-300 resize-none"
-                />
+                <label className="block text-sm font-medium text-gray-700 mb-2">Parts</label>
+                <table className="w-full border border-gray-300 rounded-lg overflow-hidden">
+                  <tbody>
+                    {parts.map((part, idx) => (
+                      <tr key={idx} className={idx !== parts.length - 1 ? 'border-b border-gray-300' : ''}>
+                        <td className="p-2 w-full">
+                          <input
+                            type="text"
+                            placeholder={`Part ${idx + 1}`}
+                            value={part}
+                            onChange={e => {
+                              const newParts = [...parts]
+                              newParts[idx] = e.target.value
+                              setParts(newParts)
+                            }}
+                            className="w-full border border-gray-300 rounded px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-red-300"
+                          />
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+                <button
+                  type="button"
+                  onClick={() => setParts([...parts, ''])}
+                  className="mt-2 text-xs text-blue-600 hover:text-blue-800 font-medium"
+                >
+                  + Add Row
+                </button>
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Customer Details (Admin Only)</label>

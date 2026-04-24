@@ -28,11 +28,13 @@ export default function SupplierQuotePage() {
 
   // Form state
   const [supplierName, setSupplierName] = useState('')
-  const [price, setPrice] = useState('')
   const [condition, setCondition] = useState('Used')
-  const [notes, setNotes] = useState('')
   const [submitting, setSubmitting] = useState(false)
   const [submitError, setSubmitError] = useState<string | null>(null)
+
+  // Parts pricing state
+  const [partPrices, setPartPrices] = useState<{ [partIndex: number]: string }>({})
+  const [partNotes, setPartNotes] = useState<{ [partIndex: number]: string }>({})
 
   // Submitted quote state
   const [submittedQuote, setSubmittedQuote] = useState<Quote | null>(null)
@@ -153,20 +155,29 @@ export default function SupplierQuotePage() {
       return
     }
 
-    // Build quote_fields array from custom field values
-    const quoteFields = Object.entries(fieldValues).map(([fieldId, value]) => ({
-      field_id: fieldId,
-      value,
-    }))
+    // Build quote_fields from part prices and notes
+    const quoteFields = request?.parts?.map((part, idx) => ({
+      field_id: `part_${idx}`,
+      value: JSON.stringify({
+        price: partPrices[idx] || '',
+        notes: partNotes[idx] || '',
+      }),
+    })) || []
+
+    // Calculate total price from all parts
+    const totalPrice = request?.parts?.reduce((sum, _, idx) => {
+      const price = parseFloat(partPrices[idx] || '0')
+      return sum + (isNaN(price) ? 0 : price)
+    }, 0) || 0
 
     const { data: newQuote, error: insertError } = await getSupabase()
       .from('quotes')
       .insert({
         request_id: id,
         supplier_name: supplierName,
-        price: parseFloat(price),
+        price: totalPrice,
         condition,
-        notes,
+        notes: '',
         quote_fields: quoteFields.length > 0 ? quoteFields : null,
       })
       .select('*')
@@ -379,25 +390,6 @@ export default function SupplierQuotePage() {
 
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
-                Price (AUD) <span style={{ color: '#d32f2f' }}>*</span>
-              </label>
-              <div className="relative">
-                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 text-sm">$</span>
-                <input
-                  type="number"
-                  required
-                  min="0"
-                  step="0.01"
-                  placeholder="0.00"
-                  value={price}
-                  onChange={e => setPrice(e.target.value)}
-                  className="w-full border border-gray-300 rounded-lg pl-7 pr-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-red-300"
-                />
-              </div>
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
                 Condition <span style={{ color: '#d32f2f' }}>*</span>
               </label>
               <select
@@ -410,6 +402,55 @@ export default function SupplierQuotePage() {
                 <option value="Reconditioned">Reconditioned</option>
               </select>
             </div>
+
+            {/* Parts Pricing Table */}
+            {request?.parts && request.parts.length > 0 && (
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Quote Details</label>
+                <div className="overflow-x-auto border border-gray-300 rounded-lg">
+                  <table className="w-full">
+                    <thead>
+                      <tr className="bg-gray-50 border-b border-gray-300">
+                        <th className="text-left px-3 py-2 text-sm font-medium text-gray-700 w-1/2">Part</th>
+                        <th className="text-left px-3 py-2 text-sm font-medium text-gray-700 w-1/4">Price (AUD)</th>
+                        <th className="text-left px-3 py-2 text-sm font-medium text-gray-700 w-1/4">Notes</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {request.parts.map((part, idx) => (
+                        <tr key={idx} className={idx !== request.parts!.length - 1 ? 'border-b border-gray-200' : ''}>
+                          <td className="px-3 py-2 text-sm text-gray-900">{part}</td>
+                          <td className="px-3 py-2">
+                            <div className="relative">
+                              <span className="absolute left-2 top-1/2 -translate-y-1/2 text-gray-500 text-sm">$</span>
+                              <input
+                                type="number"
+                                required
+                                min="0"
+                                step="0.01"
+                                placeholder="0.00"
+                                value={partPrices[idx] || ''}
+                                onChange={e => setPartPrices({ ...partPrices, [idx]: e.target.value })}
+                                className="w-full border border-gray-300 rounded px-2 py-1 pl-6 text-sm focus:outline-none focus:ring-2 focus:ring-red-300"
+                              />
+                            </div>
+                          </td>
+                          <td className="px-3 py-2">
+                            <input
+                              type="text"
+                              placeholder="e.g. New, LED, Small scratch"
+                              value={partNotes[idx] || ''}
+                              onChange={e => setPartNotes({ ...partNotes, [idx]: e.target.value })}
+                              className="w-full border border-gray-300 rounded px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-red-300"
+                            />
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
 
             {/* Custom Fields */}
             {customFields.map(field => (
@@ -467,17 +508,6 @@ export default function SupplierQuotePage() {
                 )}
               </div>
             ))}
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Notes</label>
-              <textarea
-                placeholder="Additional details, warranty, delivery info..."
-                value={notes}
-                onChange={e => setNotes(e.target.value)}
-                rows={3}
-                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-red-300 resize-none"
-              />
-            </div>
 
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Photos (optional)</label>

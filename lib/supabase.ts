@@ -46,6 +46,7 @@ export type Request = {
   customer_id: string | null
   group_id: string | null
   custom_fields: CustomField[] | null
+  parts: string[] | null
 }
 
 export type Quote = {
