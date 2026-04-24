@@ -46,7 +46,7 @@ export async function generateMetadata({ params }: Omit<Props, 'children'>): Pro
           card: 'summary_large_image',
           title,
           description,
-          image: ogImageUrl,
+          images: [ogImageUrl],
         },
       }
     }
