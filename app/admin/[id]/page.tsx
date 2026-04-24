@@ -8,6 +8,68 @@ import Lightbox from 'yet-another-react-lightbox'
 import Zoom from 'yet-another-react-lightbox/plugins/zoom'
 import 'yet-another-react-lightbox/styles.css'
 
+const modernStyles = `
+  /* Dark mode support */
+  .dark-mode {
+    --bg-primary: #0f172a;
+    --bg-secondary: #1e293b;
+    --bg-tertiary: #334155;
+    --text-primary: #f1f5f9;
+    --text-secondary: #cbd5e1;
+    --border-color: #475569;
+  }
+
+  .light-mode {
+    --bg-primary: #ffffff;
+    --bg-secondary: #f8fafc;
+    --bg-tertiary: #f1f5f9;
+    --text-primary: #0f172a;
+    --text-secondary: #475569;
+    --border-color: #e2e8f0;
+  }
+
+  input[type="text"],
+  input[type="email"],
+  input[type="tel"],
+  input[type="number"],
+  input[type="date"],
+  input[type="time"],
+  select,
+  textarea {
+    border-radius: 8px;
+    transition: all 0.2s;
+    font-size: 0.875rem;
+  }
+
+  .dark-mode input[type="text"],
+  .dark-mode input[type="email"],
+  .dark-mode input[type="tel"],
+  .dark-mode input[type="number"],
+  .dark-mode input[type="date"],
+  .dark-mode input[type="time"],
+  .dark-mode select,
+  .dark-mode textarea {
+    background: #1e293b;
+    border-color: #475569;
+    color: #f1f5f9;
+  }
+
+  input:focus,
+  select:focus,
+  textarea:focus {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(211, 47, 47, 0.15);
+  }
+
+  .dark-mode table {
+    background: #1e293b;
+  }
+
+  .dark-mode tbody tr:hover {
+    background: #334155;
+  }
+`
+
 export default function AdminRequestDetail() {
   const { id } = useParams<{ id: string }>()
   const [request, setRequest] = useState<Request | null>(null)
@@ -55,6 +117,9 @@ export default function AdminRequestDetail() {
   // Per-part selection state (maps part_index -> quote_id)
   const [selectedParts, setSelectedParts] = useState<{ [partIdx: number]: string }>({})
   const [savingSelection, setSavingSelection] = useState(false)
+
+  // Dark mode state
+  const [darkMode, setDarkMode] = useState(false)
 
   // Disable page scroll when lightbox is open
   useEffect(() => {
@@ -555,15 +620,17 @@ export default function AdminRequestDetail() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-100 flex items-center justify-center">
-        <p className="text-sm text-gray-500">Loading...</p>
+      <div className={`min-h-screen transition-colors duration-300 flex items-center justify-center ${darkMode ? 'dark-mode bg-slate-900' : 'light-mode bg-gray-100'}`}>
+        <style>{modernStyles}</style>
+        <p className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>Loading...</p>
       </div>
     )
   }
 
   if (error || !request) {
     return (
-      <div className="min-h-screen bg-gray-100 flex items-center justify-center">
+      <div className={`min-h-screen transition-colors duration-300 flex items-center justify-center ${darkMode ? 'dark-mode bg-slate-900' : 'light-mode bg-gray-100'}`}>
+        <style>{modernStyles}</style>
         <p className="text-sm text-red-600">{error || 'Request not found'}</p>
       </div>
     )
@@ -572,24 +639,34 @@ export default function AdminRequestDetail() {
   const sortedQuotes = [...quotes].sort((a, b) => a.price - b.price)
 
   return (
-    <div className="min-h-screen bg-gray-100">
+    <div className={`min-h-screen transition-colors duration-300 ${darkMode ? 'dark-mode bg-slate-900' : 'light-mode bg-gray-100'}`}>
+      <style>{modernStyles}</style>
       {/* Header */}
       <header style={{ backgroundColor: '#d32f2f' }} className="text-white px-4 py-4 shadow">
         <div className="max-w-4xl mx-auto flex items-center justify-between">
           <Link href="/admin" className="text-white text-sm opacity-80 hover:opacity-100">
             ← Back
           </Link>
-          <span className="text-sm font-semibold">Admin</span>
+          <div className="flex items-center gap-4">
+            <button
+              onClick={() => setDarkMode(!darkMode)}
+              className="p-2 rounded-lg hover:bg-white hover:bg-opacity-20 transition-all"
+              title="Toggle dark mode"
+            >
+              {darkMode ? '☀️' : '🌙'}
+            </button>
+            <span className="text-sm font-semibold">Admin</span>
+          </div>
         </div>
       </header>
 
       <main className="max-w-4xl mx-auto px-4 py-8">
         {/* Request card */}
-        <div className="bg-white rounded-lg border border-gray-200 p-6 mb-6 shadow-sm">
+        <div className={`rounded-lg border p-6 mb-6 shadow-sm ${darkMode ? 'bg-slate-800 border-slate-700' : 'bg-white border-gray-200'}`}>
           <div className="flex items-start justify-between gap-4 flex-wrap">
             <div>
               <div className="flex items-center gap-2 mb-1">
-                <h1 className="text-xl font-bold text-gray-900">{request.title}</h1>
+                <h1 className={`text-xl font-bold ${darkMode ? 'text-gray-100' : 'text-gray-900'}`}>{request.title}</h1>
                 <span
                   className={`text-xs font-medium px-2 py-0.5 rounded-full ${
                     request.status === 'open'
@@ -601,31 +678,63 @@ export default function AdminRequestDetail() {
                 </span>
               </div>
               {request.description && (
-                <p className="text-sm text-gray-600 mt-1">{request.description}</p>
+                <p className={`text-sm mt-1 ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>{request.description}</p>
               )}
-              {request.customer_details && (
-                <div className="mt-2 p-2 bg-blue-50 border border-blue-200 rounded text-sm text-blue-900">
-                  <p className="text-xs font-medium text-blue-600 mb-1">Customer Details</p>
-                  <p className="whitespace-pre-wrap">{request.customer_details}</p>
-                </div>
-              )}
+              {request.customer_details && (() => {
+                try {
+                  const details = JSON.parse(request.customer_details)
+                  if (details.type === 'ad-hoc') {
+                    // Display ad-hoc customer as formatted key-value pairs (only filled fields)
+                    const fields = [
+                      { label: 'Name', value: details.name },
+                      { label: 'Company', value: details.company },
+                      { label: 'Email', value: details.email },
+                      { label: 'Phone', value: details.phone },
+                      { label: 'Source', value: details.source },
+                      { label: 'Notes', value: details.notes }
+                    ].filter(f => f.value) // Only show fields with values
+
+                    return (
+                      <div className={`mt-2 p-3 border rounded text-sm ${darkMode ? 'bg-purple-900 bg-opacity-20 border-purple-800' : 'bg-purple-50 border-purple-200'}`}>
+                        <p className={`text-xs font-medium mb-2 ${darkMode ? 'text-purple-300' : 'text-purple-600'}`}>Customer Details (Ad-Hoc)</p>
+                        <div className="space-y-1">
+                          {fields.map((field, idx) => (
+                            <div key={idx} className="text-xs">
+                              <span className={`font-medium ${darkMode ? 'text-purple-300' : 'text-purple-700'}`}>{field.label}:</span>
+                              <span className={`ml-2 ${darkMode ? 'text-purple-200' : 'text-purple-900'}`}>{field.value}</span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )
+                  }
+                } catch (e) {
+                  // Not JSON, display as-is (regular customer details text)
+                  return (
+                    <div className={`mt-2 p-2 border rounded text-sm ${darkMode ? 'bg-blue-900 bg-opacity-20 border-blue-800 text-blue-300' : 'bg-blue-50 border-blue-200 text-blue-900'}`}>
+                      <p className={`text-xs font-medium mb-1 ${darkMode ? 'text-blue-300' : 'text-blue-600'}`}>Customer Details</p>
+                      <p className="whitespace-pre-wrap text-xs">{request.customer_details}</p>
+                    </div>
+                  )
+                }
+              })()}
 
               {request?.parts && request.parts.length > 0 && (
-                <div className="mt-3 pt-3 border-t border-gray-200">
-                  <p className="text-sm font-semibold text-gray-800 mb-3">Parts Requested ({request.parts.length})</p>
-                  <div className="overflow-x-auto border border-gray-200 rounded">
+                <div className={`mt-3 pt-3 border-t ${darkMode ? 'border-slate-700' : 'border-gray-200'}`}>
+                  <p className={`text-sm font-semibold mb-3 ${darkMode ? 'text-gray-100' : 'text-gray-800'}`}>Parts Requested ({request.parts.length})</p>
+                  <div className={`overflow-x-auto border rounded ${darkMode ? 'border-slate-700' : 'border-gray-200'}`}>
                     <table className="w-full text-sm">
                       <thead>
-                        <tr className="bg-gray-50 border-b border-gray-200">
-                          <th className="text-left px-3 py-2 font-medium text-gray-600 w-3/4">Part</th>
-                          <th className="text-left px-3 py-2 font-medium text-gray-600 w-1/4">Qty</th>
+                        <tr className={`border-b ${darkMode ? 'bg-slate-700 border-slate-600' : 'bg-gray-50 border-gray-200'}`}>
+                          <th className={`text-left px-3 py-2 font-medium w-3/4 ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>Part</th>
+                          <th className={`text-left px-3 py-2 font-medium w-1/4 ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>Qty</th>
                         </tr>
                       </thead>
                       <tbody>
                         {request.parts.map((part, idx) => (
-                          <tr key={idx} className={idx !== request.parts!.length - 1 ? 'border-b border-gray-200' : ''}>
-                            <td className="px-3 py-2 text-gray-900">{part}</td>
-                            <td className="px-3 py-2 text-gray-900">{request.quantities?.[idx] || 1}</td>
+                          <tr key={idx} className={idx !== request.parts!.length - 1 ? `border-b ${darkMode ? 'border-slate-700' : 'border-gray-200'}` : ''}>
+                            <td className={`px-3 py-2 ${darkMode ? 'text-gray-100' : 'text-gray-900'}`}>{part}</td>
+                            <td className={`px-3 py-2 ${darkMode ? 'text-gray-100' : 'text-gray-900'}`}>{request.quantities?.[idx] || 1}</td>
                           </tr>
                         ))}
                       </tbody>
@@ -634,7 +743,7 @@ export default function AdminRequestDetail() {
                 </div>
               )}
 
-              <p className="text-xs text-gray-400 mt-2">Created {formatDate(request.created_at)}</p>
+              <p className={`text-xs mt-2 ${darkMode ? 'text-gray-500' : 'text-gray-400'}`}>Created {formatDate(request.created_at)}</p>
 
               {editingExpiry ? (
                 <div className="mt-3 pt-3 border-t border-gray-200">
@@ -751,8 +860,8 @@ export default function AdminRequestDetail() {
               </button>
             </div>
 
-            <div className="mt-6 pt-6 border-t border-gray-200 w-full">
-              <label className="text-sm font-medium text-gray-700 block mb-2">Request Images</label>
+            <div className={`mt-6 pt-6 border-t w-full ${darkMode ? 'border-slate-700' : 'border-gray-200'}`}>
+              <label className={`text-sm font-medium block mb-2 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>Request Images</label>
               <div className="flex gap-2 items-center mb-3">
                 <input
                   type="file"

@@ -192,6 +192,10 @@ export default function AdminPage() {
   const [editCustomerNotes, setEditCustomerNotes] = useState('')
   const [savingCustomer, setSavingCustomer] = useState(false)
 
+  // Delete customer state
+  const [deleteConfirmCustomerId, setDeleteConfirmCustomerId] = useState<string | null>(null)
+  const [deletingCustomerId, setDeletingCustomerId] = useState<string | null>(null)
+
   async function fetchRequests() {
     const db = getSupabase()
 
@@ -361,6 +365,26 @@ export default function AdminPage() {
     setSavingCustomer(false)
   }
 
+  async function deleteCustomer(customerId: string) {
+    setDeletingCustomerId(customerId)
+    const { error } = await getSupabase()
+      .from('customers')
+      .delete()
+      .eq('id', customerId)
+
+    if (!error) {
+      setCustomers(customers.filter(c => c.id !== customerId))
+      setDeleteConfirmCustomerId(null)
+      // Clear any filters that might reference this customer
+      if (selectedCustomerId === customerId) {
+        setSelectedCustomerId(null)
+      }
+    } else {
+      setError(error.message)
+    }
+    setDeletingCustomerId(null)
+  }
+
   function selectCustomerForForm(customerId: string) {
     const customer = customers.find(c => c.id === customerId)
     if (customer) {
@@ -444,17 +468,20 @@ export default function AdminPage() {
     let finalCustomerDetails = null
 
     if (adHocName.trim()) {
-      // Ad-hoc customer - store all info as JSON in customer_details
+      // Ad-hoc customer - store only filled-in fields as JSON in customer_details
       finalCustomerId = null
-      finalCustomerDetails = JSON.stringify({
+      const adHocData: any = {
         type: 'ad-hoc',
         name: adHocName,
-        company: adHocCompany,
-        email: adHocEmail,
-        phone: adHocPhone,
-        notes: adHocNotes,
-        source: adHocSource
-      })
+      }
+      // Only add optional fields if they have values
+      if (adHocCompany.trim()) adHocData.company = adHocCompany
+      if (adHocEmail.trim()) adHocData.email = adHocEmail
+      if (adHocPhone.trim()) adHocData.phone = adHocPhone
+      if (adHocNotes.trim()) adHocData.notes = adHocNotes
+      if (adHocSource) adHocData.source = adHocSource
+
+      finalCustomerDetails = JSON.stringify(adHocData)
     } else {
       // Regular customer from dropdown
       finalCustomerId = formCustomerId || null
@@ -543,7 +570,7 @@ export default function AdminPage() {
             ? 'bg-slate-800 border-slate-700'
             : 'bg-white border-gray-200'
         }`}>
-          <h2 className="text-sm font-semibold text-gray-800 mb-4">Filter by Customer</h2>
+          <h2 className={`text-sm font-semibold mb-4 ${darkMode ? 'text-gray-100' : 'text-gray-800'}`}>Filter by Customer</h2>
 
           {/* Search box */}
           <input
@@ -570,21 +597,54 @@ export default function AdminPage() {
               <p className="text-xs text-gray-400 text-center py-4">No customers found</p>
             ) : (
               filteredCustomers.map(customer => (
-                <button
-                  key={customer.id}
-                  onClick={() => setSelectedCustomerId(customer.id)}
-                  className={`w-full text-left px-3 py-2 rounded-lg text-sm transition ${
-                    selectedCustomerId === customer.id
-                      ? 'bg-red-100 text-red-900 font-medium'
-                      : 'bg-gray-50 text-gray-700 hover:bg-gray-100'
-                  }`}
-                >
-                  <div className="font-medium">{customer.name}</div>
-                  {customer.company && <div className="text-xs text-gray-500">{customer.company}</div>}
-                  <div className="text-xs text-gray-400">
-                    {requests.filter(r => r.customer_id === customer.id).length} request{requests.filter(r => r.customer_id === customer.id).length !== 1 ? 's' : ''}
-                  </div>
-                </button>
+                <div key={customer.id}>
+                  {deleteConfirmCustomerId === customer.id ? (
+                    <div className="bg-red-50 border border-red-200 rounded-lg p-2 text-xs space-y-2">
+                      <p className="text-red-900 font-medium">Delete {customer.name}?</p>
+                      <div className="flex gap-1">
+                        <button
+                          onClick={() => deleteCustomer(customer.id)}
+                          disabled={deletingCustomerId === customer.id}
+                          className="flex-1 bg-red-600 text-white text-xs font-medium px-2 py-1 rounded hover:bg-red-700 transition disabled:opacity-60"
+                        >
+                          {deletingCustomerId === customer.id ? 'Deleting...' : 'Delete'}
+                        </button>
+                        <button
+                          onClick={() => setDeleteConfirmCustomerId(null)}
+                          className="flex-1 bg-white border border-red-200 text-red-600 text-xs font-medium px-2 py-1 rounded hover:bg-red-50 transition"
+                        >
+                          Cancel
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    <button
+                      onClick={() => setSelectedCustomerId(customer.id)}
+                      className={`w-full text-left px-3 py-2 rounded-lg text-sm transition relative group ${
+                        selectedCustomerId === customer.id
+                          ? 'bg-red-100 text-red-900 font-medium'
+                          : 'bg-gray-50 text-gray-700 hover:bg-gray-100'
+                      }`}
+                    >
+                      <div className="font-medium">{customer.name}</div>
+                      {customer.company && <div className="text-xs text-gray-500">{customer.company}</div>}
+                      <div className="text-xs text-gray-400">
+                        {requests.filter(r => r.customer_id === customer.id).length} request{requests.filter(r => r.customer_id === customer.id).length !== 1 ? 's' : ''}
+                      </div>
+                      <button
+                        onClick={(e) => {
+                          e.preventDefault()
+                          e.stopPropagation()
+                          setDeleteConfirmCustomerId(customer.id)
+                        }}
+                        className="absolute top-1 right-1 text-red-600 hover:text-red-800 opacity-0 group-hover:opacity-100 transition text-lg"
+                        title="Delete customer"
+                      >
+                        ✕
+                      </button>
+                    </button>
+                  )}
+                </div>
               ))
             )}
           </div>
@@ -614,7 +674,7 @@ export default function AdminPage() {
         <div className="max-w-4xl mx-auto">
           {/* Top bar */}
           <div className="flex items-center justify-between mb-6">
-            <h2 className="text-lg font-semibold text-gray-800">
+            <h2 className={`text-lg font-semibold ${darkMode ? 'text-gray-100' : 'text-gray-800'}`}>
               {selectedCustomerId ? `Requests for ${customers.find(c => c.id === selectedCustomerId)?.name}` : 'All Requests'}
             </h2>
             <div className="flex gap-2 items-center">
@@ -638,11 +698,11 @@ export default function AdminPage() {
         {/* Create form */}
         {showForm && (
           <div className={`card ${darkMode ? 'bg-slate-800 border-slate-700' : 'bg-white border-gray-200'} p-6 mb-6`}>
-            <h3 className="text-base font-semibold text-gray-800 mb-4">Create New Request</h3>
+            <h3 className={`text-base font-semibold mb-4 ${darkMode ? 'text-gray-100' : 'text-gray-800'}`}>Create New Request</h3>
             {error && <p className="text-sm text-red-600 mb-3">{error}</p>}
             <form onSubmit={handleSubmit} className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Title</label>
+                <label className={`block text-sm font-medium mb-1 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>Title</label>
                 <input
                   type="text"
                   required
@@ -658,7 +718,7 @@ export default function AdminPage() {
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Customer (Optional)</label>
+                <label className={`block text-sm font-medium mb-1 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>Customer (Optional)</label>
                 <div className="flex gap-2 items-end">
                   <select
                     value={formCustomerId || ''}
@@ -698,9 +758,9 @@ export default function AdminPage() {
                 </div>
               </div>
 
-              <div className="bg-purple-50 border border-purple-200 rounded-lg p-4 space-y-3 mb-4">
-                <p className="text-sm font-semibold text-purple-900 mb-3">Quick Customer (Ad-Hoc)</p>
-                <p className="text-xs text-purple-700 mb-3">For one-time contacts - leave blank to use selected customer above</p>
+              <div className={`border rounded-lg p-4 space-y-3 mb-4 ${darkMode ? 'bg-purple-900 bg-opacity-20 border-purple-800' : 'bg-purple-50 border-purple-200'}`}>
+                <p className={`text-sm font-semibold mb-3 ${darkMode ? 'text-purple-300' : 'text-purple-900'}`}>Quick Customer (Ad-Hoc)</p>
+                <p className={`text-xs mb-3 ${darkMode ? 'text-purple-300' : 'text-purple-700'}`}>For one-time contacts - leave blank to use selected customer above</p>
                 <input
                   type="text"
                   placeholder="Customer name"
@@ -752,43 +812,43 @@ export default function AdminPage() {
               </div>
 
               {formCustomerId && (
-                <div className="border border-gray-200 rounded-lg overflow-hidden">
+                <div className={`border rounded-lg overflow-hidden ${darkMode ? 'border-slate-700' : 'border-gray-200'}`}>
                   <table className="w-full text-sm">
                     <tbody>
-                      <tr className="border-b border-gray-200">
-                        <td className="px-3 py-2 font-medium text-gray-600 bg-gray-50 w-1/4">Name</td>
-                        <td className="px-3 py-2 text-gray-900">
+                      <tr className={`border-b ${darkMode ? 'border-slate-700' : 'border-gray-200'}`}>
+                        <td className={`px-3 py-2 font-medium w-1/4 ${darkMode ? 'bg-slate-700 text-gray-300' : 'bg-gray-50 text-gray-600'}`}>Name</td>
+                        <td className={`px-3 py-2 ${darkMode ? 'text-gray-100' : 'text-gray-900'}`}>
                           {customers.find(c => c.id === formCustomerId)?.name}
                         </td>
                       </tr>
                       {customers.find(c => c.id === formCustomerId)?.company && (
-                        <tr className="border-b border-gray-200">
-                          <td className="px-3 py-2 font-medium text-gray-600 bg-gray-50 w-1/4">Company</td>
-                          <td className="px-3 py-2 text-gray-900">
+                        <tr className={`border-b ${darkMode ? 'border-slate-700' : 'border-gray-200'}`}>
+                          <td className={`px-3 py-2 font-medium w-1/4 ${darkMode ? 'bg-slate-700 text-gray-300' : 'bg-gray-50 text-gray-600'}`}>Company</td>
+                          <td className={`px-3 py-2 ${darkMode ? 'text-gray-100' : 'text-gray-900'}`}>
                             {customers.find(c => c.id === formCustomerId)?.company}
                           </td>
                         </tr>
                       )}
                       {customers.find(c => c.id === formCustomerId)?.email && (
-                        <tr className="border-b border-gray-200">
-                          <td className="px-3 py-2 font-medium text-gray-600 bg-gray-50 w-1/4">Email</td>
-                          <td className="px-3 py-2 text-gray-900">
+                        <tr className={`border-b ${darkMode ? 'border-slate-700' : 'border-gray-200'}`}>
+                          <td className={`px-3 py-2 font-medium w-1/4 ${darkMode ? 'bg-slate-700 text-gray-300' : 'bg-gray-50 text-gray-600'}`}>Email</td>
+                          <td className={`px-3 py-2 ${darkMode ? 'text-gray-100' : 'text-gray-900'}`}>
                             {customers.find(c => c.id === formCustomerId)?.email}
                           </td>
                         </tr>
                       )}
                       {customers.find(c => c.id === formCustomerId)?.phone && (
-                        <tr className="border-b border-gray-200">
-                          <td className="px-3 py-2 font-medium text-gray-600 bg-gray-50 w-1/4">Phone</td>
-                          <td className="px-3 py-2 text-gray-900">
+                        <tr className={`border-b ${darkMode ? 'border-slate-700' : 'border-gray-200'}`}>
+                          <td className={`px-3 py-2 font-medium w-1/4 ${darkMode ? 'bg-slate-700 text-gray-300' : 'bg-gray-50 text-gray-600'}`}>Phone</td>
+                          <td className={`px-3 py-2 ${darkMode ? 'text-gray-100' : 'text-gray-900'}`}>
                             {customers.find(c => c.id === formCustomerId)?.phone}
                           </td>
                         </tr>
                       )}
                       {customers.find(c => c.id === formCustomerId)?.notes && (
                         <tr>
-                          <td className="px-3 py-2 font-medium text-gray-600 bg-gray-50 w-1/4">Notes</td>
-                          <td className="px-3 py-2 text-gray-900 whitespace-pre-wrap">
+                          <td className={`px-3 py-2 font-medium w-1/4 ${darkMode ? 'bg-slate-700 text-gray-300' : 'bg-gray-50 text-gray-600'}`}>Notes</td>
+                          <td className={`px-3 py-2 whitespace-pre-wrap ${darkMode ? 'text-gray-100' : 'text-gray-900'}`}>
                             {customers.find(c => c.id === formCustomerId)?.notes}
                           </td>
                         </tr>
@@ -799,8 +859,8 @@ export default function AdminPage() {
               )}
 
               {showAddCustomer && (
-                <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 space-y-3">
-                  <p className="text-sm font-semibold text-blue-900 mb-3">Add New Customer</p>
+                <div className={`border rounded-lg p-4 space-y-3 ${darkMode ? 'bg-blue-900 bg-opacity-20 border-blue-800' : 'bg-blue-50 border-blue-200'}`}>
+                  <p className={`text-sm font-semibold mb-3 ${darkMode ? 'text-blue-300' : 'text-blue-900'}`}>Add New Customer</p>
                   <input
                     type="text"
                     placeholder="Customer name *"
@@ -849,8 +909,8 @@ export default function AdminPage() {
               )}
 
               {editingCustomerId && (
-                <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 space-y-3">
-                  <p className="text-sm font-semibold text-amber-900 mb-3">Edit Customer</p>
+                <div className={`border rounded-lg p-4 space-y-3 ${darkMode ? 'bg-amber-900 bg-opacity-20 border-amber-800' : 'bg-amber-50 border-amber-200'}`}>
+                  <p className={`text-sm font-semibold mb-3 ${darkMode ? 'text-amber-300' : 'text-amber-900'}`}>Edit Customer</p>
                   <input
                     type="text"
                     placeholder="Customer name *"
@@ -907,18 +967,18 @@ export default function AdminPage() {
               )}
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Parts</label>
-                <div className="overflow-x-auto border border-gray-300 rounded-lg">
+                <label className={`block text-sm font-medium mb-2 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>Parts</label>
+                <div className={`overflow-x-auto border rounded-lg ${darkMode ? 'border-slate-700' : 'border-gray-300'}`}>
                   <table className="w-full">
                     <thead>
-                      <tr className="bg-gray-50 border-b border-gray-300">
-                        <th className="text-left px-3 py-2 text-xs font-medium text-gray-600 w-3/4">Part</th>
-                        <th className="text-left px-3 py-2 text-xs font-medium text-gray-600 w-1/4">Qty</th>
+                      <tr className={`border-b ${darkMode ? 'bg-slate-700 border-slate-600' : 'bg-gray-50 border-gray-300'}`}>
+                        <th className={`text-left px-3 py-2 text-xs font-medium w-3/4 ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>Part</th>
+                        <th className={`text-left px-3 py-2 text-xs font-medium w-1/4 ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>Qty</th>
                       </tr>
                     </thead>
                     <tbody>
                       {parts.map((part, idx) => (
-                        <tr key={idx} className={idx !== parts.length - 1 ? 'border-b border-gray-300' : ''}>
+                        <tr key={idx} className={idx !== parts.length - 1 ? `border-b ${darkMode ? 'border-slate-600' : 'border-gray-300'}` : ''}>
                           <td className="p-2">
                             <input
                               type="text"
@@ -975,10 +1035,10 @@ export default function AdminPage() {
 
           {/* Requests list */}
           {loading ? (
-            <p className="text-sm text-gray-500">Loading...</p>
+            <p className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>Loading...</p>
           ) : filteredRequests.length === 0 ? (
             <div className={`card ${darkMode ? 'bg-slate-800 border-slate-700' : 'bg-white border-gray-200'} p-8 text-center`}>
-              <p className="text-gray-500 text-sm">
+              <p className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
                 {selectedCustomerId ? 'No requests for this customer.' : 'No requests yet. Create your first one above.'}
               </p>
             </div>
@@ -1088,9 +1148,9 @@ export default function AdminPage() {
                         }`}>
                           <div className="flex items-start justify-between gap-2">
                           <div className="flex-1">
-                            <p className="font-medium text-gray-900 text-sm">{req.title}</p>
+                            <p className={`font-medium text-sm ${darkMode ? 'text-gray-100' : 'text-gray-900'}`}>{req.title}</p>
                             {req.description && (
-                              <p className="text-xs text-gray-500 mt-0.5 line-clamp-1">{req.description}</p>
+                              <p className={`text-xs mt-0.5 line-clamp-1 ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>{req.description}</p>
                             )}
                             {req.customer_id && customers.find(c => c.id === req.customer_id) && (
                               <p className="text-xs text-blue-600 mt-1">

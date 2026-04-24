@@ -7,6 +7,68 @@ import Lightbox from 'yet-another-react-lightbox'
 import Zoom from 'yet-another-react-lightbox/plugins/zoom'
 import 'yet-another-react-lightbox/styles.css'
 
+const modernStyles = `
+  /* Dark mode support */
+  .dark-mode {
+    --bg-primary: #0f172a;
+    --bg-secondary: #1e293b;
+    --bg-tertiary: #334155;
+    --text-primary: #f1f5f9;
+    --text-secondary: #cbd5e1;
+    --border-color: #475569;
+  }
+
+  .light-mode {
+    --bg-primary: #ffffff;
+    --bg-secondary: #f8fafc;
+    --bg-tertiary: #f1f5f9;
+    --text-primary: #0f172a;
+    --text-secondary: #475569;
+    --border-color: #e2e8f0;
+  }
+
+  input[type="text"],
+  input[type="email"],
+  input[type="tel"],
+  input[type="number"],
+  input[type="date"],
+  input[type="time"],
+  select,
+  textarea {
+    border-radius: 8px;
+    transition: all 0.2s;
+    font-size: 0.875rem;
+  }
+
+  .dark-mode input[type="text"],
+  .dark-mode input[type="email"],
+  .dark-mode input[type="tel"],
+  .dark-mode input[type="number"],
+  .dark-mode input[type="date"],
+  .dark-mode input[type="time"],
+  .dark-mode select,
+  .dark-mode textarea {
+    background: #1e293b;
+    border-color: #475569;
+    color: #f1f5f9;
+  }
+
+  input:focus,
+  select:focus,
+  textarea:focus {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(211, 47, 47, 0.15);
+  }
+
+  .dark-mode table {
+    background: #1e293b;
+  }
+
+  .dark-mode tbody tr:hover {
+    background: #334155;
+  }
+`
+
 interface Quote {
   id: string
   supplier_name: string
@@ -52,6 +114,9 @@ export default function SupplierQuotePage() {
   // Custom fields state
   const [customFields, setCustomFields] = useState<CustomField[]>([])
   const [fieldValues, setFieldValues] = useState<{ [fieldId: string]: string }>({})
+
+  // Dark mode state
+  const [darkMode, setDarkMode] = useState(false)
 
   // Disable page scroll when lightbox is open
   useEffect(() => {
@@ -216,16 +281,18 @@ export default function SupplierQuotePage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-100 flex items-center justify-center">
-        <p className="text-sm text-gray-500">Loading...</p>
+      <div className={`min-h-screen transition-colors duration-300 flex items-center justify-center ${darkMode ? 'dark-mode bg-slate-900' : 'light-mode bg-gray-100'}`}>
+        <style>{modernStyles}</style>
+        <p className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>Loading...</p>
       </div>
     )
   }
 
   if (error || !request) {
     return (
-      <div className="min-h-screen bg-gray-100 flex items-center justify-center px-4">
-        <div className="bg-white rounded-lg border border-gray-200 p-8 max-w-md w-full text-center">
+      <div className={`min-h-screen transition-colors duration-300 flex items-center justify-center px-4 ${darkMode ? 'dark-mode bg-slate-900' : 'light-mode bg-gray-100'}`}>
+        <style>{modernStyles}</style>
+        <div className={`rounded-lg border p-8 max-w-md w-full text-center ${darkMode ? 'bg-slate-800 border-slate-700' : 'bg-white border-gray-200'}`}>
           <p className="text-red-600 font-medium">{error || 'Request not found'}</p>
         </div>
       </div>
@@ -234,13 +301,14 @@ export default function SupplierQuotePage() {
 
   if (isExpired) {
     return (
-      <div className="min-h-screen bg-gray-100 flex items-center justify-center px-4">
-        <div className="bg-white rounded-lg border border-gray-200 p-8 max-w-md w-full text-center">
+      <div className={`min-h-screen transition-colors duration-300 flex items-center justify-center px-4 ${darkMode ? 'dark-mode bg-slate-900' : 'light-mode bg-gray-100'}`}>
+        <style>{modernStyles}</style>
+        <div className={`rounded-lg border p-8 max-w-md w-full text-center ${darkMode ? 'bg-slate-800 border-slate-700' : 'bg-white border-gray-200'}`}>
           <div className="w-12 h-12 rounded-full bg-red-100 flex items-center justify-center mx-auto mb-4">
             <span className="text-xl">⏰</span>
           </div>
-          <h2 className="font-semibold text-gray-800 mb-1">Quote Link Expired</h2>
-          <p className="text-sm text-gray-500">This quote request is no longer accepting submissions.</p>
+          <h2 className={`font-semibold mb-1 ${darkMode ? 'text-gray-100' : 'text-gray-800'}`}>Quote Link Expired</h2>
+          <p className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>This quote request is no longer accepting submissions.</p>
         </div>
       </div>
     )
@@ -248,13 +316,14 @@ export default function SupplierQuotePage() {
 
   if (request.status === 'closed') {
     return (
-      <div className="min-h-screen bg-gray-100 flex items-center justify-center px-4">
-        <div className="bg-white rounded-lg border border-gray-200 p-8 max-w-md w-full text-center">
+      <div className={`min-h-screen transition-colors duration-300 flex items-center justify-center px-4 ${darkMode ? 'dark-mode bg-slate-900' : 'light-mode bg-gray-100'}`}>
+        <style>{modernStyles}</style>
+        <div className={`rounded-lg border p-8 max-w-md w-full text-center ${darkMode ? 'bg-slate-800 border-slate-700' : 'bg-white border-gray-200'}`}>
           <div className="w-12 h-12 rounded-full bg-red-100 flex items-center justify-center mx-auto mb-4">
             <span className="text-xl">&#x1F512;</span>
           </div>
-          <h2 className="font-semibold text-gray-800 mb-1">Quotes Closed</h2>
-          <p className="text-sm text-gray-500">This request is no longer accepting quotes.</p>
+          <h2 className={`font-semibold mb-1 ${darkMode ? 'text-gray-100' : 'text-gray-800'}`}>Quotes Closed</h2>
+          <p className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>This request is no longer accepting quotes.</p>
         </div>
       </div>
     )
@@ -262,58 +331,66 @@ export default function SupplierQuotePage() {
 
   if (submittedQuote) {
     return (
-      <div className="min-h-screen bg-gray-100">
+      <div className={`min-h-screen transition-colors duration-300 ${darkMode ? 'dark-mode bg-slate-900' : 'light-mode bg-gray-100'}`}>
+        <style>{modernStyles}</style>
         <header style={{ backgroundColor: '#d32f2f' }} className="text-white px-4 py-4 shadow">
-          <div className="max-w-lg mx-auto">
+          <div className="max-w-lg mx-auto flex items-center justify-between">
             <h1 className="text-lg font-bold">Quote Submitted</h1>
+            <button
+              onClick={() => setDarkMode(!darkMode)}
+              className="p-2 rounded-lg hover:bg-white hover:bg-opacity-20 transition-all"
+              title="Toggle dark mode"
+            >
+              {darkMode ? '☀️' : '🌙'}
+            </button>
           </div>
         </header>
 
         <main className="max-w-lg mx-auto px-4 py-8">
-          <div className="bg-white rounded-lg border border-gray-200 p-5 mb-6 shadow-sm text-center">
+          <div className={`rounded-lg border p-5 mb-6 shadow-sm text-center ${darkMode ? 'bg-slate-800 border-slate-700' : 'bg-white border-gray-200'}`}>
             <div className="w-12 h-12 rounded-full bg-green-100 flex items-center justify-center mx-auto mb-4">
               <svg className="w-6 h-6 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
               </svg>
             </div>
-            <h2 className="font-semibold text-gray-800 mb-1">Quote Submitted!</h2>
-            <p className="text-sm text-gray-500">Thank you. Your quote has been received.</p>
+            <h2 className={`font-semibold mb-1 ${darkMode ? 'text-gray-100' : 'text-gray-800'}`}>Quote Submitted!</h2>
+            <p className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>Thank you. Your quote has been received.</p>
           </div>
 
-          <div className="bg-white rounded-lg border border-gray-200 p-5 shadow-sm">
-            <h3 className="text-base font-semibold text-gray-800 mb-4">Your Quote</h3>
+          <div className={`rounded-lg border p-5 shadow-sm ${darkMode ? 'bg-slate-800 border-slate-700' : 'bg-white border-gray-200'}`}>
+            <h3 className={`text-base font-semibold mb-4 ${darkMode ? 'text-gray-100' : 'text-gray-800'}`}>Your Quote</h3>
             <div className="space-y-4">
               <div>
-                <label className="block text-xs text-gray-400 uppercase tracking-wide font-medium mb-1">
+                <label className={`block text-xs uppercase tracking-wide font-medium mb-1 ${darkMode ? 'text-gray-400' : 'text-gray-400'}`}>
                   Your Name / Company
                 </label>
-                <p className="text-sm text-gray-900">{submittedQuote.supplier_name}</p>
+                <p className={`text-sm ${darkMode ? 'text-gray-100' : 'text-gray-900'}`}>{submittedQuote.supplier_name}</p>
               </div>
 
               <div>
-                <label className="block text-xs text-gray-400 uppercase tracking-wide font-medium mb-1">
+                <label className={`block text-xs uppercase tracking-wide font-medium mb-1 ${darkMode ? 'text-gray-400' : 'text-gray-400'}`}>
                   Price (AUD)
                 </label>
-                <p className="text-sm text-gray-900">${submittedQuote.price.toFixed(2)}</p>
+                <p className={`text-sm ${darkMode ? 'text-gray-100' : 'text-gray-900'}`}>${submittedQuote.price.toFixed(2)}</p>
               </div>
 
               <div>
-                <label className="block text-xs text-gray-400 uppercase tracking-wide font-medium mb-1">
+                <label className={`block text-xs uppercase tracking-wide font-medium mb-1 ${darkMode ? 'text-gray-400' : 'text-gray-400'}`}>
                   Condition
                 </label>
-                <p className="text-sm text-gray-900">{submittedQuote.condition}</p>
+                <p className={`text-sm ${darkMode ? 'text-gray-100' : 'text-gray-900'}`}>{submittedQuote.condition}</p>
               </div>
 
               {submittedQuote.notes && (
                 <div>
-                  <label className="block text-xs text-gray-400 uppercase tracking-wide font-medium mb-1">
+                  <label className={`block text-xs uppercase tracking-wide font-medium mb-1 ${darkMode ? 'text-gray-400' : 'text-gray-400'}`}>
                     Notes
                   </label>
-                  <p className="text-sm text-gray-900 whitespace-pre-wrap">{submittedQuote.notes}</p>
+                  <p className={`text-sm whitespace-pre-wrap ${darkMode ? 'text-gray-100' : 'text-gray-900'}`}>{submittedQuote.notes}</p>
                 </div>
               )}
 
-              <div className="pt-2 border-t border-gray-200">
+              <div className={`pt-2 border-t ${darkMode ? 'border-slate-700' : 'border-gray-200'}`}>
                 <p className="text-xs text-gray-400">
                   Submitted on {new Date(submittedQuote.created_at).toLocaleDateString()}
                 </p>
@@ -326,21 +403,29 @@ export default function SupplierQuotePage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-100">
+    <div className={`min-h-screen transition-colors duration-300 ${darkMode ? 'dark-mode bg-slate-900' : 'light-mode bg-gray-100'}`}>
+      <style>{modernStyles}</style>
       {/* Header */}
       <header style={{ backgroundColor: '#d32f2f' }} className="text-white px-4 py-4 shadow">
-        <div className="max-w-lg mx-auto">
+        <div className="max-w-lg mx-auto flex items-center justify-between">
           <h1 className="text-lg font-bold">Submit a Quote</h1>
+          <button
+            onClick={() => setDarkMode(!darkMode)}
+            className="p-2 rounded-lg hover:bg-white hover:bg-opacity-20 transition-all"
+            title="Toggle dark mode"
+          >
+            {darkMode ? '☀️' : '🌙'}
+          </button>
         </div>
       </header>
 
       <main className="max-w-lg mx-auto px-4 py-8">
         {/* Request info */}
-        <div className="bg-white rounded-lg border border-gray-200 p-5 mb-6 shadow-sm">
+        <div className={`rounded-lg border p-5 mb-6 shadow-sm ${darkMode ? 'bg-slate-800 border-slate-700' : 'bg-white border-gray-200'}`}>
           <p className="text-xs text-gray-400 uppercase tracking-wide font-medium mb-1">Request</p>
-          <h2 className="text-lg font-bold text-gray-900">{request.title}</h2>
+          <h2 className={`text-lg font-bold ${darkMode ? 'text-gray-100' : 'text-gray-900'}`}>{request.title}</h2>
           {request.description && (
-            <p className="text-sm text-gray-600 mt-2">{request.description}</p>
+            <p className={`text-sm mt-2 ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>{request.description}</p>
           )}
           {requestImages.length > 0 && (
             <div className="mt-4">
@@ -351,7 +436,7 @@ export default function SupplierQuotePage() {
                     key={img.id}
                     src={`${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/quote-images/${img.storage_path}`}
                     alt="request"
-                    className="w-full h-24 object-cover rounded border border-gray-300 cursor-pointer hover:opacity-80 transition"
+                    className={`w-full h-24 object-cover rounded border cursor-pointer hover:opacity-80 transition ${darkMode ? 'border-slate-700' : 'border-gray-300'}`}
                     onClick={() => {
                       setLightboxImages(requestImages.map(i => ({
                         src: `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/quote-images/${i.storage_path}`
@@ -367,8 +452,8 @@ export default function SupplierQuotePage() {
         </div>
 
         {/* Quote form */}
-        <div className="bg-white rounded-lg border border-gray-200 p-5 shadow-sm">
-          <h3 className="text-base font-semibold text-gray-800 mb-4">Your Quote</h3>
+        <div className={`rounded-lg border p-5 shadow-sm ${darkMode ? 'bg-slate-800 border-slate-700' : 'bg-white border-gray-200'}`}>
+          <h3 className={`text-base font-semibold mb-4 ${darkMode ? 'text-gray-100' : 'text-gray-800'}`}>Your Quote</h3>
           {submitError && (
             <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded text-sm text-red-700">
               {submitError}
@@ -376,7 +461,7 @@ export default function SupplierQuotePage() {
           )}
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label className={`block text-sm font-medium mb-1 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
                 Your Name / Company <span style={{ color: '#d32f2f' }}>*</span>
               </label>
               <input
@@ -390,7 +475,7 @@ export default function SupplierQuotePage() {
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label className={`block text-sm font-medium mb-1 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
                 Condition <span style={{ color: '#d32f2f' }}>*</span>
               </label>
               <select
@@ -407,22 +492,22 @@ export default function SupplierQuotePage() {
             {/* Parts Pricing Table */}
             {request?.parts && request.parts.length > 0 && (
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Quote Details</label>
-                <div className="overflow-x-auto border border-gray-300 rounded-lg">
+                <label className={`block text-sm font-medium mb-2 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>Quote Details</label>
+                <div className={`overflow-x-auto border rounded-lg ${darkMode ? 'border-slate-700' : 'border-gray-300'}`}>
                   <table className="w-full text-sm">
                     <thead>
-                      <tr className="bg-gray-50 border-b border-gray-300">
-                        <th className="text-left px-3 py-2 font-medium text-gray-700 w-2/5">Part</th>
-                        <th className="text-left px-3 py-2 font-medium text-gray-700 w-1/8">Qty</th>
-                        <th className="text-left px-3 py-2 font-medium text-gray-700 w-1/4">Price (AUD)</th>
-                        <th className="text-left px-3 py-2 font-medium text-gray-700 w-1/4">Notes</th>
+                      <tr className={`border-b ${darkMode ? 'bg-slate-700 border-slate-600' : 'bg-gray-50 border-gray-300'}`}>
+                        <th className={`text-left px-3 py-2 font-medium w-2/5 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>Part</th>
+                        <th className={`text-left px-3 py-2 font-medium w-1/8 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>Qty</th>
+                        <th className={`text-left px-3 py-2 font-medium w-1/4 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>Price (AUD)</th>
+                        <th className={`text-left px-3 py-2 font-medium w-1/4 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>Notes</th>
                       </tr>
                     </thead>
                     <tbody>
                       {request.parts.map((part, idx) => (
-                        <tr key={idx} className={idx !== request.parts!.length - 1 ? 'border-b border-gray-200' : ''}>
-                          <td className="px-3 py-2 text-gray-900">{part}</td>
-                          <td className="px-3 py-2 text-gray-900 font-medium">{request.quantities?.[idx] || 1}</td>
+                        <tr key={idx} className={idx !== request.parts!.length - 1 ? `border-b ${darkMode ? 'border-slate-700' : 'border-gray-200'}` : ''}>
+                          <td className={`px-3 py-2 ${darkMode ? 'text-gray-100' : 'text-gray-900'}`}>{part}</td>
+                          <td className={`px-3 py-2 font-medium ${darkMode ? 'text-gray-100' : 'text-gray-900'}`}>{request.quantities?.[idx] || 1}</td>
                           <td className="px-3 py-2">
                             <div className="relative">
                               <span className="absolute left-2 top-1/2 -translate-y-1/2 text-gray-500 text-sm">$</span>
@@ -458,7 +543,7 @@ export default function SupplierQuotePage() {
             {/* Custom Fields */}
             {customFields.map(field => (
               <div key={field.id}>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className={`block text-sm font-medium mb-1 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
                   {field.name}
                   {field.required && <span style={{ color: '#d32f2f' }}>*</span>}
                 </label>
@@ -513,7 +598,7 @@ export default function SupplierQuotePage() {
             ))}
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Photos (optional)</label>
+              <label className={`block text-sm font-medium mb-1 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>Photos (optional)</label>
               <input
                 type="file"
                 accept="image/*"
@@ -521,7 +606,7 @@ export default function SupplierQuotePage() {
                 disabled={uploadingImage}
                 className="text-sm file:border file:border-gray-300 file:rounded file:px-2 file:py-1 hover:file:bg-gray-50"
               />
-              {uploadingImage && <p className="text-xs text-gray-500 mt-1">Uploading...</p>}
+              {uploadingImage && <p className={`text-xs mt-1 ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>Uploading...</p>}
               {quoteImages.length > 0 && (
                 <div className="grid grid-cols-3 gap-2 mt-2">
                   {quoteImages.map((img, idx) => (
@@ -529,7 +614,7 @@ export default function SupplierQuotePage() {
                       key={img.storage_path}
                       src={getImageUrl(img.storage_path)}
                       alt="quote"
-                      className="w-full h-16 object-cover rounded border border-gray-300 cursor-pointer hover:opacity-80 transition"
+                      className={`w-full h-16 object-cover rounded border cursor-pointer hover:opacity-80 transition ${darkMode ? 'border-slate-700' : 'border-gray-300'}`}
                       onClick={() => {
                         setLightboxImages(quoteImages.map(i => ({
                           src: getImageUrl(i.storage_path)
