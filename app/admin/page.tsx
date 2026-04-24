@@ -4,7 +4,27 @@ import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { getSupabase, type Request, type Customer } from '@/lib/supabase'
 
-const checkboxStyles = `
+const modernStyles = `
+  /* Dark mode support */
+  .dark-mode {
+    --bg-primary: #0f172a;
+    --bg-secondary: #1e293b;
+    --bg-tertiary: #334155;
+    --text-primary: #f1f5f9;
+    --text-secondary: #cbd5e1;
+    --border-color: #475569;
+  }
+
+  .light-mode {
+    --bg-primary: #ffffff;
+    --bg-secondary: #f8fafc;
+    --bg-tertiary: #f1f5f9;
+    --text-primary: #0f172a;
+    --text-secondary: #475569;
+    --border-color: #e2e8f0;
+  }
+
+  /* Checkboxes */
   input[type="checkbox"].styled-checkbox {
     appearance: none;
     width: 20px;
@@ -14,6 +34,11 @@ const checkboxStyles = `
     cursor: pointer;
     transition: all 0.2s;
     background: white;
+  }
+
+  .dark-mode input[type="checkbox"].styled-checkbox {
+    background: #1e293b;
+    border-color: #475569;
   }
 
   input[type="checkbox"].styled-checkbox:hover {
@@ -34,10 +59,80 @@ const checkboxStyles = `
     border-color: #b71c1c;
   }
 
-  input[type="checkbox"].styled-checkbox:focus {
-    outline: none;
-    ring: 2px;
-    ring-color: #fecaca;
+  /* Modern Buttons */
+  button {
+    transition: all 0.3s ease;
+    border-radius: 8px;
+    font-weight: 500;
+  }
+
+  button:active {
+    transform: scale(0.98);
+  }
+
+  /* Inputs */
+  input[type="text"],
+  input[type="email"],
+  input[type="tel"],
+  input[type="number"],
+  input[type="date"],
+  input[type="time"],
+  select,
+  textarea {
+    border-radius: 8px;
+    transition: all 0.2s;
+    font-size: 0.875rem;
+  }
+
+  .dark-mode input[type="text"],
+  .dark-mode input[type="email"],
+  .dark-mode input[type="tel"],
+  .dark-mode input[type="number"],
+  .dark-mode input[type="date"],
+  .dark-mode input[type="time"],
+  .dark-mode select,
+  .dark-mode textarea {
+    background: #1e293b;
+    border-color: #475569;
+    color: #f1f5f9;
+  }
+
+  input:focus,
+  select:focus,
+  textarea:focus {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(211, 47, 47, 0.15);
+  }
+
+  /* Cards */
+  .card {
+    border-radius: 12px;
+    transition: all 0.3s ease;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+  }
+
+  .card:hover {
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
+    transform: translateY(-2px);
+  }
+
+  .dark-mode .card {
+    background: #1e293b;
+    border-color: #475569;
+  }
+
+  /* Tables */
+  table {
+    border-collapse: separate;
+    border-spacing: 0;
+  }
+
+  .dark-mode table {
+    background: #1e293b;
+  }
+
+  .dark-mode tbody tr:hover {
+    background: #334155;
   }
 `
 
@@ -84,6 +179,9 @@ export default function AdminPage() {
   const [selectedRequests, setSelectedRequests] = useState<Set<string>>(new Set())
   const [bulkDeleting, setBulkDeleting] = useState(false)
   const [bulkClosing, setBulkClosing] = useState(false)
+
+  // Dark mode state
+  const [darkMode, setDarkMode] = useState(false)
 
   // Edit customer state
   const [editingCustomerId, setEditingCustomerId] = useState<string | null>(null)
@@ -419,19 +517,32 @@ export default function AdminPage() {
   )
 
   return (
-    <div className="min-h-screen bg-gray-100">
-      <style>{checkboxStyles}</style>
+    <div className={`min-h-screen transition-colors duration-300 ${darkMode ? 'dark-mode bg-slate-900' : 'light-mode bg-gray-50'}`}>
+      <style>{modernStyles}</style>
       {/* Header */}
-      <header style={{ backgroundColor: '#d32f2f' }} className="text-white px-4 py-4 shadow">
-        <div className="max-w-6xl mx-auto flex items-center justify-between">
-          <h1 className="text-xl font-bold tracking-tight">Supplier Quote System</h1>
-          <span className="text-sm opacity-80">Admin</span>
+      <header style={{ backgroundColor: '#d32f2f' }} className="text-white px-4 py-4 shadow-lg">
+        <div className="max-w-7xl mx-auto flex items-center justify-between">
+          <h1 className="text-2xl font-bold tracking-tight">Supplier Quote System</h1>
+          <div className="flex items-center gap-4">
+            <button
+              onClick={() => setDarkMode(!darkMode)}
+              className="p-2 rounded-lg hover:bg-white hover:bg-opacity-20 transition-all"
+              title="Toggle dark mode"
+            >
+              {darkMode ? '☀️' : '🌙'}
+            </button>
+            <span className="text-sm opacity-90">Admin</span>
+          </div>
         </div>
       </header>
 
-      <div className="flex min-h-screen bg-gray-100">
+      <div className={`flex min-h-screen transition-colors duration-300 ${darkMode ? 'bg-slate-900' : 'bg-gray-50'}`}>
         {/* Left Sidebar - Customer Filter */}
-        <div className="w-64 bg-white border-r border-gray-200 p-4 shadow-sm overflow-y-auto">
+        <div className={`w-64 transition-colors duration-300 border-r p-4 shadow-sm overflow-y-auto ${
+          darkMode
+            ? 'bg-slate-800 border-slate-700'
+            : 'bg-white border-gray-200'
+        }`}>
           <h2 className="text-sm font-semibold text-gray-800 mb-4">Filter by Customer</h2>
 
           {/* Search box */}
@@ -480,7 +591,7 @@ export default function AdminPage() {
         </div>
 
         {/* Main Content */}
-        <main className="flex-1 px-4 py-8">
+        <main className="flex-1 px-4 py-8 transition-colors duration-300">
         {/* New link banner */}
         {newLink && (
           <div className="mb-6 bg-green-50 border border-green-200 rounded-lg p-4">
@@ -526,7 +637,7 @@ export default function AdminPage() {
 
         {/* Create form */}
         {showForm && (
-          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 mb-6">
+          <div className={`card ${darkMode ? 'bg-slate-800 border-slate-700' : 'bg-white border-gray-200'} p-6 mb-6`}>
             <h3 className="text-base font-semibold text-gray-800 mb-4">Create New Request</h3>
             {error && <p className="text-sm text-red-600 mb-3">{error}</p>}
             <form onSubmit={handleSubmit} className="space-y-4">
@@ -538,7 +649,11 @@ export default function AdminPage() {
                   placeholder="e.g. 2015 Mazda 3 Front Bumper"
                   value={title}
                   onChange={e => setTitle(e.target.value)}
-                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-red-300"
+                  className={`w-full rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-red-300 transition-all ${
+                  darkMode
+                    ? 'bg-slate-700 border border-slate-600 text-gray-100 placeholder-gray-400'
+                    : 'bg-white border border-gray-300 text-gray-900'
+                }`}
                 />
               </div>
 
@@ -862,7 +977,7 @@ export default function AdminPage() {
           {loading ? (
             <p className="text-sm text-gray-500">Loading...</p>
           ) : filteredRequests.length === 0 ? (
-            <div className="bg-white rounded-lg border border-gray-200 p-8 text-center">
+            <div className={`card ${darkMode ? 'bg-slate-800 border-slate-700' : 'bg-white border-gray-200'} p-8 text-center`}>
               <p className="text-gray-500 text-sm">
                 {selectedCustomerId ? 'No requests for this customer.' : 'No requests yet. Create your first one above.'}
               </p>
@@ -966,8 +1081,10 @@ export default function AdminPage() {
                       </div>
                     ) : (
                       <Link href={`/admin/${req.id}`}>
-                        <div className={`bg-white rounded-lg border p-4 hover:border-red-300 hover:shadow-sm transition cursor-pointer ${
-                          selectedRequests.has(req.id) ? 'border-blue-300 bg-blue-50' : 'border-gray-200'
+                        <div className={`card p-4 cursor-pointer transition-all ${
+                          selectedRequests.has(req.id)
+                            ? darkMode ? 'border-blue-500 bg-blue-900 bg-opacity-30' : 'border-blue-300 bg-blue-50'
+                            : darkMode ? 'bg-slate-800 border-slate-700 hover:border-red-500' : 'bg-white border-gray-200 hover:border-red-300'
                         }`}>
                           <div className="flex items-start justify-between gap-2">
                           <div className="flex-1">
