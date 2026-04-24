@@ -755,8 +755,45 @@ export default function AdminRequestDetail() {
                     <span className="inline-block text-xs bg-gray-100 text-gray-600 px-2 py-0.5 rounded-full mb-2">
                       {quote.condition}
                     </span>
-                    {quote.notes && (
-                      <p className="text-sm text-gray-600 mb-2">{quote.notes}</p>
+
+                    {/* Parts Table */}
+                    {request?.parts && request.parts.length > 0 && (
+                      <div className="mt-3 pt-3 border-t border-gray-200">
+                        <p className="text-xs text-gray-500 font-medium mb-2">Quote Details</p>
+                        <div className="overflow-x-auto border border-gray-200 rounded text-xs">
+                          <table className="w-full">
+                            <thead>
+                              <tr className="bg-gray-50 border-b border-gray-200">
+                                <th className="text-left px-2 py-1 font-medium text-gray-600 w-1/2">Part</th>
+                                <th className="text-left px-2 py-1 font-medium text-gray-600 w-1/4">Price</th>
+                                <th className="text-left px-2 py-1 font-medium text-gray-600 w-1/4">Notes</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {request.parts.map((part, partIdx) => {
+                                let partPrice = ''
+                                let partNotes = ''
+                                if (quote.quote_fields && quote.quote_fields[partIdx]) {
+                                  try {
+                                    const parsed = JSON.parse(quote.quote_fields[partIdx].value)
+                                    partPrice = parsed.price || ''
+                                    partNotes = parsed.notes || ''
+                                  } catch (e) {
+                                    // Fallback if parsing fails
+                                  }
+                                }
+                                return (
+                                  <tr key={partIdx} className={partIdx !== request.parts!.length - 1 ? 'border-b border-gray-200' : ''}>
+                                    <td className="px-2 py-1 text-gray-900">{part}</td>
+                                    <td className="px-2 py-1 text-gray-900">${Number(partPrice).toFixed(2)}</td>
+                                    <td className="px-2 py-1 text-gray-600">{partNotes}</td>
+                                  </tr>
+                                )
+                              })}
+                            </tbody>
+                          </table>
+                        </div>
+                      </div>
                     )}
 
                     {editingNoteId === quote.id ? (
