@@ -68,6 +68,14 @@ export default function AdminPage() {
   const [newCustomerNotes, setNewCustomerNotes] = useState('')
   const [addingCustomer, setAddingCustomer] = useState(false)
 
+  // Ad-hoc customer state
+  const [adHocName, setAdHocName] = useState('')
+  const [adHocCompany, setAdHocCompany] = useState('')
+  const [adHocEmail, setAdHocEmail] = useState('')
+  const [adHocPhone, setAdHocPhone] = useState('')
+  const [adHocNotes, setAdHocNotes] = useState('')
+  const [adHocSource, setAdHocSource] = useState('Phone Call')
+
   // Delete request state
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null)
   const [deletingId, setDeletingId] = useState<string | null>(null)
@@ -333,6 +341,28 @@ export default function AdminPage() {
 
     const nonEmptyQuantities = quantities.slice(0, nonEmptyParts.length)
 
+    // Determine customer info - use ad-hoc if name is filled, otherwise use dropdown
+    let finalCustomerId = null
+    let finalCustomerDetails = null
+
+    if (adHocName.trim()) {
+      // Ad-hoc customer - store all info as JSON in customer_details
+      finalCustomerId = null
+      finalCustomerDetails = JSON.stringify({
+        type: 'ad-hoc',
+        name: adHocName,
+        company: adHocCompany,
+        email: adHocEmail,
+        phone: adHocPhone,
+        notes: adHocNotes,
+        source: adHocSource
+      })
+    } else {
+      // Regular customer from dropdown
+      finalCustomerId = formCustomerId || null
+      finalCustomerDetails = customerDetails || null
+    }
+
     const { data, error } = await getSupabase()
       .from('requests')
       .insert({
@@ -340,8 +370,8 @@ export default function AdminPage() {
         description: '',
         parts: nonEmptyParts,
         quantities: nonEmptyQuantities,
-        customer_details: customerDetails || null,
-        customer_id: formCustomerId || null,
+        customer_details: finalCustomerDetails,
+        customer_id: finalCustomerId,
         status: 'open'
       })
       .select()
@@ -356,6 +386,12 @@ export default function AdminPage() {
       setQuantities([1, 1, 1])
       setCustomerDetails('')
       setFormCustomerId(null)
+      setAdHocName('')
+      setAdHocCompany('')
+      setAdHocEmail('')
+      setAdHocPhone('')
+      setAdHocNotes('')
+      setAdHocSource('Phone Call')
       setShowForm(false)
       fetchRequests()
     }
@@ -545,6 +581,59 @@ export default function AdminPage() {
                     {showAddCustomer ? '− Cancel' : '+ New'}
                   </button>
                 </div>
+              </div>
+
+              <div className="bg-purple-50 border border-purple-200 rounded-lg p-4 space-y-3 mb-4">
+                <p className="text-sm font-semibold text-purple-900 mb-3">Quick Customer (Ad-Hoc)</p>
+                <p className="text-xs text-purple-700 mb-3">For one-time contacts - leave blank to use selected customer above</p>
+                <input
+                  type="text"
+                  placeholder="Customer name"
+                  value={adHocName}
+                  onChange={e => setAdHocName(e.target.value)}
+                  className="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-purple-300"
+                />
+                <input
+                  type="text"
+                  placeholder="Company (optional)"
+                  value={adHocCompany}
+                  onChange={e => setAdHocCompany(e.target.value)}
+                  className="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-purple-300"
+                />
+                <input
+                  type="email"
+                  placeholder="Email (optional)"
+                  value={adHocEmail}
+                  onChange={e => setAdHocEmail(e.target.value)}
+                  className="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-purple-300"
+                />
+                <input
+                  type="tel"
+                  placeholder="Phone (optional)"
+                  value={adHocPhone}
+                  onChange={e => setAdHocPhone(e.target.value)}
+                  className="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-purple-300"
+                />
+                <select
+                  value={adHocSource}
+                  onChange={e => setAdHocSource(e.target.value)}
+                  className="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-purple-300"
+                >
+                  <option value="Phone Call">Phone Call</option>
+                  <option value="SMS">SMS</option>
+                  <option value="Email">Email</option>
+                  <option value="Walk-in">Walk-in</option>
+                  <option value="Facebook">Facebook</option>
+                  <option value="Instagram">Instagram</option>
+                  <option value="Other">Other</option>
+                </select>
+                <textarea
+                  placeholder="Notes (optional)"
+                  value={adHocNotes}
+                  onChange={e => setAdHocNotes(e.target.value)}
+                  rows={2}
+                  className="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-purple-300 resize-none"
+                />
               </div>
 
               {formCustomerId && (
@@ -891,6 +980,19 @@ export default function AdminPage() {
                                 👤 {customers.find(c => c.id === req.customer_id)?.name}
                               </p>
                             )}
+                            {!req.customer_id && req.customer_details && (() => {
+                              try {
+                                const adHoc = JSON.parse(req.customer_details)
+                                if (adHoc.type === 'ad-hoc') {
+                                  return (
+                                    <p className="text-xs text-purple-600 mt-1">
+                                      ☎️ {adHoc.name} ({adHoc.source})
+                                    </p>
+                                  )
+                                }
+                              } catch (e) {}
+                              return null
+                            })()}
                             <p className="text-xs text-gray-400 mt-1">{formatDate(req.created_at)}</p>
                           </div>
                           <div className="flex items-center gap-2 shrink-0">
