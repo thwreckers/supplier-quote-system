@@ -7,6 +7,9 @@ type Props = {
 }
 
 export async function generateMetadata({ params }: Omit<Props, 'children'>): Promise<Metadata> {
+  const baseUrl = 'https://quotes.thwreckers.com.au'
+  const ogImageUrl = `${baseUrl}/og-image.png`
+
   try {
     const { id } = await params
     const db = getSupabase()
@@ -18,7 +21,6 @@ export async function generateMetadata({ params }: Omit<Props, 'children'>): Pro
       .single()
 
     if (request) {
-      const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://quotes.thwreckers.com.au'
       const title = `${request.title} - Supplier Quote`
       const description = request.description || `Submit your quote for ${request.title}`
 
@@ -31,11 +33,20 @@ export async function generateMetadata({ params }: Omit<Props, 'children'>): Pro
           type: 'website',
           url: `${baseUrl}/quote/${id}`,
           siteName: 'Supplier Quote System',
+          images: [
+            {
+              url: ogImageUrl,
+              width: 1200,
+              height: 630,
+              alt: title,
+            },
+          ],
         },
         twitter: {
           card: 'summary_large_image',
           title,
           description,
+          image: ogImageUrl,
         },
       }
     }
