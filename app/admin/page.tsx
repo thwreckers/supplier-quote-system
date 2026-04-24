@@ -649,7 +649,6 @@ export default function AdminPage() {
                   <input
                     type="checkbox"
                     checked={selectedRequests.size > 0 && selectedRequests.size === filteredRequests.length}
-                    indeterminate={selectedRequests.size > 0 && selectedRequests.size < filteredRequests.length}
                     onChange={toggleSelectAll}
                     className="cursor-pointer w-4 h-4"
                   />
