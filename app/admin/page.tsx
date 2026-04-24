@@ -35,6 +35,10 @@ export default function AdminPage() {
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null)
   const [deletingId, setDeletingId] = useState<string | null>(null)
 
+  // Bulk selection state
+  const [selectedRequests, setSelectedRequests] = useState<Set<string>>(new Set())
+  const [bulkDeleting, setBulkDeleting] = useState(false)
+
   async function fetchRequests() {
     const db = getSupabase()
 
@@ -91,6 +95,41 @@ export default function AdminPage() {
       setError(error.message)
     }
     setDeletingId(null)
+  }
+
+  function toggleRequestSelection(requestId: string) {
+    const newSelected = new Set(selectedRequests)
+    if (newSelected.has(requestId)) {
+      newSelected.delete(requestId)
+    } else {
+      newSelected.add(requestId)
+    }
+    setSelectedRequests(newSelected)
+  }
+
+  function toggleSelectAll() {
+    if (selectedRequests.size === filteredRequests.length) {
+      setSelectedRequests(new Set())
+    } else {
+      setSelectedRequests(new Set(filteredRequests.map(r => r.id)))
+    }
+  }
+
+  async function bulkDeleteRequests() {
+    setBulkDeleting(true)
+    const { error } = await getSupabase()
+      .from('requests')
+      .delete()
+      .in('id', Array.from(selectedRequests))
+
+    if (!error) {
+      setRequests(requests.filter(r => !selectedRequests.has(r.id)))
+      setSelectedRequests(new Set())
+      setDeleteConfirmId(null)
+    } else {
+      setError(error.message)
+    }
+    setBulkDeleting(false)
   }
 
   function selectCustomerForForm(customerId: string) {
@@ -559,32 +598,102 @@ export default function AdminPage() {
               </p>
             </div>
           ) : (
-            <div className="space-y-3">
+            <>
+              {selectedRequests.size > 0 && (
+                <div className="bg-blue-50 border border-blue-300 rounded-lg p-4 mb-4 flex items-center justify-between">
+                  <p className="text-sm font-semibold text-blue-900">
+                    {selectedRequests.size} request{selectedRequests.size !== 1 ? 's' : ''} selected
+                  </p>
+                  <div className="flex gap-2">
+                    <button
+                      onClick={() => setSelectedRequests(new Set())}
+                      className="text-sm border border-blue-300 rounded px-3 py-1 hover:bg-blue-100 transition text-blue-700"
+                    >
+                      Clear
+                    </button>
+                    <button
+                      onClick={() => setDeleteConfirmId('bulk')}
+                      className="text-sm bg-red-600 text-white rounded px-3 py-1 hover:bg-red-700 transition font-medium"
+                    >
+                      Delete Selected
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {deleteConfirmId === 'bulk' && (
+                <div className="bg-red-50 border border-red-300 rounded-lg p-4 mb-4">
+                  <p className="text-sm font-semibold text-red-900 mb-3">
+                    Delete {selectedRequests.size} request{selectedRequests.size !== 1 ? 's' : ''}?
+                  </p>
+                  <div className="flex gap-2">
+                    <button
+                      onClick={bulkDeleteRequests}
+                      disabled={bulkDeleting}
+                      className="flex-1 bg-red-600 text-white text-sm font-medium px-3 py-2 rounded hover:bg-red-700 transition disabled:opacity-60"
+                    >
+                      {bulkDeleting ? 'Deleting...' : 'Delete'}
+                    </button>
+                    <button
+                      onClick={() => setDeleteConfirmId(null)}
+                      className="flex-1 bg-white border border-red-300 text-red-600 text-sm font-medium px-3 py-2 rounded hover:bg-red-50 transition"
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              <div className="space-y-3">
+                <div className="flex items-center gap-2 mb-2">
+                  <input
+                    type="checkbox"
+                    checked={selectedRequests.size > 0 && selectedRequests.size === filteredRequests.length}
+                    indeterminate={selectedRequests.size > 0 && selectedRequests.size < filteredRequests.length}
+                    onChange={toggleSelectAll}
+                    className="cursor-pointer w-4 h-4"
+                  />
+                  <label className="text-xs text-gray-600 font-medium cursor-pointer">
+                    {selectedRequests.size === filteredRequests.length && filteredRequests.length > 0
+                      ? 'Deselect All'
+                      : 'Select All'}
+                  </label>
+                </div>
               {filteredRequests.map(req => (
-                <div key={req.id}>
-                  {deleteConfirmId === req.id ? (
-                    <div className="bg-red-50 border border-red-300 rounded-lg p-4">
-                      <p className="text-sm font-semibold text-red-900 mb-3">Delete "{req.title}"?</p>
-                      <div className="flex gap-2">
-                        <button
-                          onClick={() => deleteRequest(req.id)}
-                          disabled={deletingId === req.id}
-                          className="flex-1 bg-red-600 text-white text-sm font-medium px-3 py-2 rounded hover:bg-red-700 transition disabled:opacity-60"
-                        >
-                          {deletingId === req.id ? 'Deleting...' : 'Delete'}
-                        </button>
-                        <button
-                          onClick={() => setDeleteConfirmId(null)}
-                          className="flex-1 bg-white border border-red-300 text-red-600 text-sm font-medium px-3 py-2 rounded hover:bg-red-50 transition"
-                        >
-                          Cancel
-                        </button>
+                <div key={req.id} className="flex items-start gap-2">
+                  <input
+                    type="checkbox"
+                    checked={selectedRequests.has(req.id)}
+                    onChange={() => toggleRequestSelection(req.id)}
+                    onClick={(e) => e.stopPropagation()}
+                    className="cursor-pointer w-4 h-4 mt-1 shrink-0"
+                  />
+                  <div className="flex-1">
+                    {deleteConfirmId === req.id ? (
+                      <div className="bg-red-50 border border-red-300 rounded-lg p-4">
+                        <p className="text-sm font-semibold text-red-900 mb-3">Delete "{req.title}"?</p>
+                        <div className="flex gap-2">
+                          <button
+                            onClick={() => deleteRequest(req.id)}
+                            disabled={deletingId === req.id}
+                            className="flex-1 bg-red-600 text-white text-sm font-medium px-3 py-2 rounded hover:bg-red-700 transition disabled:opacity-60"
+                          >
+                            {deletingId === req.id ? 'Deleting...' : 'Delete'}
+                          </button>
+                          <button
+                            onClick={() => setDeleteConfirmId(null)}
+                            className="flex-1 bg-white border border-red-300 text-red-600 text-sm font-medium px-3 py-2 rounded hover:bg-red-50 transition"
+                          >
+                            Cancel
+                          </button>
+                        </div>
                       </div>
-                    </div>
-                  ) : (
-                    <Link href={`/admin/${req.id}`}>
-                      <div className="bg-white rounded-lg border border-gray-200 p-4 hover:border-red-300 hover:shadow-sm transition cursor-pointer">
-                        <div className="flex items-start justify-between gap-2">
+                    ) : (
+                      <Link href={`/admin/${req.id}`}>
+                        <div className={`bg-white rounded-lg border p-4 hover:border-red-300 hover:shadow-sm transition cursor-pointer ${
+                          selectedRequests.has(req.id) ? 'border-blue-300 bg-blue-50' : 'border-gray-200'
+                        }`}>
+                          <div className="flex items-start justify-between gap-2">
                           <div className="flex-1">
                             <p className="font-medium text-gray-900 text-sm">{req.title}</p>
                             {req.description && (
@@ -628,8 +737,10 @@ export default function AdminPage() {
                     </Link>
                   )}
                 </div>
+                </div>
               ))}
-            </div>
+              </div>
+            </>
           )}
         </div>
       </main>
