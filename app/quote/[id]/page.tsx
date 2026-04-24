@@ -281,8 +281,15 @@ export default function SupplierQuotePage() {
 
   if (loading) {
     return (
-      <div className={`min-h-screen transition-colors duration-300 flex items-center justify-center ${darkMode ? 'dark-mode bg-slate-900' : 'light-mode bg-gray-100'}`}>
+      <div className={`min-h-screen transition-colors duration-300 flex flex-col items-center justify-center ${darkMode ? 'dark-mode bg-slate-900' : 'light-mode bg-gray-100'}`}>
         <style>{modernStyles}</style>
+        <div className="mb-8">
+          <img
+            src="/og-image.png"
+            alt="T&H Wreckers"
+            className="h-20 object-contain"
+          />
+        </div>
         <p className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>Loading...</p>
       </div>
     )
@@ -290,8 +297,15 @@ export default function SupplierQuotePage() {
 
   if (error || !request) {
     return (
-      <div className={`min-h-screen transition-colors duration-300 flex items-center justify-center px-4 ${darkMode ? 'dark-mode bg-slate-900' : 'light-mode bg-gray-100'}`}>
+      <div className={`min-h-screen transition-colors duration-300 flex flex-col items-center justify-center px-4 ${darkMode ? 'dark-mode bg-slate-900' : 'light-mode bg-gray-100'}`}>
         <style>{modernStyles}</style>
+        <div className="mb-8">
+          <img
+            src="/og-image.png"
+            alt="T&H Wreckers"
+            className="h-20 object-contain"
+          />
+        </div>
         <div className={`rounded-lg border p-8 max-w-md w-full text-center ${darkMode ? 'bg-slate-800 border-slate-700' : 'bg-white border-gray-200'}`}>
           <p className="text-red-600 font-medium">{error || 'Request not found'}</p>
         </div>
@@ -301,8 +315,15 @@ export default function SupplierQuotePage() {
 
   if (isExpired) {
     return (
-      <div className={`min-h-screen transition-colors duration-300 flex items-center justify-center px-4 ${darkMode ? 'dark-mode bg-slate-900' : 'light-mode bg-gray-100'}`}>
+      <div className={`min-h-screen transition-colors duration-300 flex flex-col items-center justify-center px-4 ${darkMode ? 'dark-mode bg-slate-900' : 'light-mode bg-gray-100'}`}>
         <style>{modernStyles}</style>
+        <div className="mb-8">
+          <img
+            src="/og-image.png"
+            alt="T&H Wreckers"
+            className="h-20 object-contain"
+          />
+        </div>
         <div className={`rounded-lg border p-8 max-w-md w-full text-center ${darkMode ? 'bg-slate-800 border-slate-700' : 'bg-white border-gray-200'}`}>
           <div className="w-12 h-12 rounded-full bg-red-100 flex items-center justify-center mx-auto mb-4">
             <span className="text-xl">⏰</span>
@@ -316,8 +337,15 @@ export default function SupplierQuotePage() {
 
   if (request.status === 'closed') {
     return (
-      <div className={`min-h-screen transition-colors duration-300 flex items-center justify-center px-4 ${darkMode ? 'dark-mode bg-slate-900' : 'light-mode bg-gray-100'}`}>
+      <div className={`min-h-screen transition-colors duration-300 flex flex-col items-center justify-center px-4 ${darkMode ? 'dark-mode bg-slate-900' : 'light-mode bg-gray-100'}`}>
         <style>{modernStyles}</style>
+        <div className="mb-8">
+          <img
+            src="/og-image.png"
+            alt="T&H Wreckers"
+            className="h-20 object-contain"
+          />
+        </div>
         <div className={`rounded-lg border p-8 max-w-md w-full text-center ${darkMode ? 'bg-slate-800 border-slate-700' : 'bg-white border-gray-200'}`}>
           <div className="w-12 h-12 rounded-full bg-red-100 flex items-center justify-center mx-auto mb-4">
             <span className="text-xl">&#x1F512;</span>
@@ -347,6 +375,14 @@ export default function SupplierQuotePage() {
         </header>
 
         <main className="max-w-lg mx-auto px-4 py-8">
+          {/* Logo */}
+          <div className="flex justify-center mb-8">
+            <img
+              src="/og-image.png"
+              alt="T&H Wreckers"
+              className="h-20 object-contain"
+            />
+          </div>
           <div className={`rounded-lg border p-5 mb-6 shadow-sm text-center ${darkMode ? 'bg-slate-800 border-slate-700' : 'bg-white border-gray-200'}`}>
             <div className="w-12 h-12 rounded-full bg-green-100 flex items-center justify-center mx-auto mb-4">
               <svg className="w-6 h-6 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -420,6 +456,15 @@ export default function SupplierQuotePage() {
       </header>
 
       <main className="max-w-lg mx-auto px-4 py-8">
+        {/* Logo */}
+        <div className="flex justify-center mb-8">
+          <img
+            src="/og-image.png"
+            alt="T&H Wreckers"
+            className="h-20 object-contain"
+          />
+        </div>
+
         {/* Request info */}
         <div className={`rounded-lg border p-5 mb-6 shadow-sm ${darkMode ? 'bg-slate-800 border-slate-700' : 'bg-white border-gray-200'}`}>
           <p className="text-xs text-gray-400 uppercase tracking-wide font-medium mb-1">Request</p>
