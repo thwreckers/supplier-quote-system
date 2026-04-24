@@ -998,6 +998,73 @@ export default function AdminRequestDetail() {
             ))}
           </div>
         )}
+
+        {/* Quick Supplier Comparison */}
+        {request?.parts && request.parts.length > 0 && quotes.length > 0 && (
+          <div className="mt-8 pt-6 border-t border-gray-200">
+            <h3 className="text-base font-semibold text-gray-800 mb-4">Quick Supplier Comparison</h3>
+            <div className="overflow-x-auto border border-gray-200 rounded">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="bg-gray-50 border-b border-gray-200">
+                    <th className="text-left px-3 py-2 font-medium text-gray-600">Part (Qty)</th>
+                    {sortedQuotes.map(quote => (
+                      <th key={quote.id} className="text-left px-3 py-2 font-medium text-gray-600 min-w-32 border-l border-gray-200">
+                        {quote.supplier_name}
+                      </th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {request.parts.map((part, partIdx) => {
+                    const prices = sortedQuotes.map(quote => {
+                      if (quote.quote_fields && quote.quote_fields[partIdx]) {
+                        try {
+                          const parsed = JSON.parse(quote.quote_fields[partIdx].value)
+                          return parseFloat(parsed.price || '0')
+                        } catch (e) {
+                          return null
+                        }
+                      }
+                      return null
+                    })
+                    const minPrice = Math.min(...prices.filter(p => p !== null) as number[])
+                    const qty = request.quantities?.[partIdx] || 1
+
+                    return (
+                      <tr key={partIdx} className={partIdx !== request.parts!.length - 1 ? 'border-b border-gray-200' : ''}>
+                        <td className="px-3 py-2 font-medium text-gray-900">
+                          {part} ({qty}x)
+                        </td>
+                        {sortedQuotes.map((quote, quoteIdx) => {
+                          const price = prices[quoteIdx]
+                          const isLowest = price !== null && price === minPrice
+                          const isSelected = selectedParts[partIdx] === quote.id
+
+                          return (
+                            <td
+                              key={quote.id}
+                              className={`px-3 py-2 border-l border-gray-200 cursor-pointer transition ${
+                                isLowest ? 'bg-green-50 font-bold text-green-700' : ''
+                              } ${isSelected ? 'bg-blue-50 border-l-4 border-l-blue-400' : ''} hover:bg-gray-50`}
+                              onClick={() => savePartSelection(partIdx, quote.id)}
+                            >
+                              {price !== null ? `$${price.toFixed(2)}` : '—'}
+                              {isLowest && price !== null && (
+                                <span className="ml-1 text-xs bg-green-200 text-green-800 px-1 rounded">✓</span>
+                              )}
+                              {isSelected && <span className="ml-1 text-xs">✓ Selected</span>}
+                            </td>
+                          )
+                        })}
+                      </tr>
+                    )
+                  })}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
       </main>
 
       <Lightbox
