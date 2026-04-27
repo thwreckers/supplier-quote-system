@@ -152,20 +152,33 @@ export default function SuppliersPage() {
   }
 
   async function deleteSupplier(supplierId: string) {
-    if (!confirm('Delete this supplier? Their quotes will be unlinked automatically.')) return
+    if (!confirm('Delete this supplier?')) return
 
     try {
       const db = getSupabase()
-      const { error } = await db.from('suppliers').delete().eq('id', supplierId)
+      const { data, error, count } = await db
+        .from('suppliers')
+        .delete({ count: 'exact' })
+        .eq('id', supplierId)
+        .select()
+
+      console.log('Delete response:', { data, error, count })
+
       if (error) {
-        console.error('Error deleting supplier:', error)
-        alert(`Error: ${error.message}`)
+        alert(`DB Error: ${error.message}\nCode: ${error.code}\nDetails: ${error.details}\nHint: ${error.hint}`)
         return
       }
+
+      if (count === 0) {
+        alert(`Delete returned 0 rows affected. The supplier ID ${supplierId} was not found in the database, OR the delete was silently blocked.`)
+        return
+      }
+
+      alert(`Successfully deleted ${count} supplier(s)`)
       fetchSuppliers()
     } catch (error) {
-      console.error('Error deleting supplier:', error)
-      alert('Error deleting supplier')
+      console.error('Exception:', error)
+      alert(`Exception: ${error instanceof Error ? error.message : String(error)}`)
     }
   }
 
