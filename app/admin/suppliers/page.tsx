@@ -271,7 +271,7 @@ export default function SuppliersPage() {
       const db = getSupabase()
 
       for (const stat of selectedList) {
-        console.log(`Deleting supplier: ${stat.supplier.id}`)
+        console.log(`Soft-deleting supplier: ${stat.supplier.id}`)
 
         // Unlink quotes
         console.log(`Unlinking quotes for supplier: ${stat.supplier.id}`)
@@ -287,18 +287,17 @@ export default function SuppliersPage() {
           return
         }
 
-        // Delete supplier
-        console.log(`Deleting supplier record: ${stat.supplier.id}`)
-        const deleteResult = await db
+        // Mark supplier as deleted by setting merged_into_id to a sentinel value
+        // (merged_into_id = their own ID means "deleted")
+        console.log(`Marking supplier as deleted: ${stat.supplier.id}`)
+        const { error: deleteError } = await db
           .from('suppliers')
-          .delete()
+          .update({ merged_into_id: stat.supplier.id })
           .eq('id', stat.supplier.id)
 
-        console.log('Delete result:', deleteResult)
-
-        if (deleteResult.error) {
-          console.error(`Error deleting supplier:`, deleteResult.error)
-          alert(`Error deleting supplier: ${deleteResult.error.message}`)
+        if (deleteError) {
+          console.error(`Error marking supplier as deleted:`, deleteError)
+          alert(`Error marking supplier: ${deleteError.message}`)
           setIsProcessing(false)
           return
         }
@@ -371,11 +370,21 @@ export default function SuppliersPage() {
     }
   }
 
-  const filteredSuppliers = suppliers.filter(s =>
-    !s.supplier.merged_into_id && // Hide merged suppliers
-    (s.supplier.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    (s.supplier.company?.toLowerCase().includes(searchQuery.toLowerCase())))
-  )
+  const filteredSuppliers = suppliers.filter(s => {
+    // Hide merged suppliers (merged_into_id is set and not equal to their own id)
+    if (s.supplier.merged_into_id && s.supplier.merged_into_id !== s.supplier.id) {
+      return false
+    }
+    // Hide soft-deleted suppliers (merged_into_id equals their own id)
+    if (s.supplier.merged_into_id === s.supplier.id) {
+      return false
+    }
+    // Match search query
+    return (
+      s.supplier.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (s.supplier.company?.toLowerCase().includes(searchQuery.toLowerCase()))
+    )
+  })
 
   const totalPages = Math.ceil(filteredSuppliers.length / SUPPLIERS_PER_PAGE)
   const paginatedSuppliers = filteredSuppliers.slice(
