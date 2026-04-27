@@ -649,7 +649,7 @@ export default function AdminRequestDetail() {
                   {request.status}
                 </span>
                 {request?.group_id && (
-                  <span className="text-xs bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full font-medium">
+                  <span className="text-sm bg-blue-100 text-blue-700 px-3 py-1 rounded-full font-semibold">
                     {groupLinkClicks} click{groupLinkClicks !== 1 ? 's' : ''}
                   </span>
                 )}
@@ -807,18 +807,16 @@ export default function AdminRequestDetail() {
                 >
                   {refreshing ? 'Refreshing...' : '🔄 Refresh'}
                 </button>
-              </div>
-            </div>
 
-            <div className="mt-6 pt-6 border-t border-gray-200">
-              <button
-                onClick={toggleStatus}
-                disabled={togglingStatus}
-                style={request.status === 'open' ? { backgroundColor: '#555' } : { backgroundColor: '#d32f2f' }}
-                className="w-full text-white text-sm font-semibold px-4 py-2 rounded-lg hover:opacity-90 transition disabled:opacity-60 shadow-md"
-              >
-                {request.status === 'open' ? 'Close Request' : 'Reopen Request'}
-              </button>
+                <button
+                  onClick={toggleStatus}
+                  disabled={togglingStatus}
+                  style={request.status === 'open' ? { backgroundColor: '#555' } : { backgroundColor: '#d32f2f' }}
+                  className="w-full text-white text-sm font-semibold px-4 py-2 rounded-lg hover:opacity-90 transition disabled:opacity-60 shadow-md"
+                >
+                  {request.status === 'open' ? 'Close Request' : 'Reopen Request'}
+                </button>
+              </div>
             </div>
 
             <div className={`mt-6 pt-6 border-t w-full ${darkMode ? 'border-slate-700' : 'border-gray-200'}`}>
