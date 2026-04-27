@@ -210,24 +210,42 @@ export default function SuppliersPage() {
 
       // Update all quotes from other suppliers to primary
       for (const other of othersToMerge) {
-        await db
+        console.log(`Updating quotes for supplier: ${other.id} -> ${primary.id}`)
+        const { error: quoteError } = await db
           .from('quotes')
           .update({ supplier_id: primary.id })
           .eq('supplier_id', other.id)
 
+        if (quoteError) {
+          console.error(`Error updating quotes for ${other.name}:`, quoteError)
+          alert(`Error updating quotes: ${quoteError.message}`)
+          setIsProcessing(false)
+          return
+        }
+
         // Mark as merged
-        await db
+        console.log(`Marking supplier as merged: ${other.id}`)
+        const { error: mergeError } = await db
           .from('suppliers')
           .update({ merged_into_id: primary.id })
           .eq('id', other.id)
+
+        if (mergeError) {
+          console.error(`Error marking supplier as merged:`, mergeError)
+          alert(`Error marking supplier: ${mergeError.message}`)
+          setIsProcessing(false)
+          return
+        }
       }
 
+      console.log('Merge completed successfully')
+      alert('Suppliers merged successfully!')
       setSelectedSuppliers(new Set())
       setBulkAction(null)
       fetchSuppliers()
     } catch (error) {
       console.error('Error merging suppliers:', error)
-      alert('Error merging suppliers')
+      alert(`Error: ${error instanceof Error ? error.message : 'Unknown error'}`)
     } finally {
       setIsProcessing(false)
     }
@@ -253,22 +271,45 @@ export default function SuppliersPage() {
       const db = getSupabase()
 
       for (const stat of selectedList) {
+        console.log(`Deleting supplier: ${stat.supplier.id}`)
+
         // Unlink quotes
-        await db
+        console.log(`Unlinking quotes for supplier: ${stat.supplier.id}`)
+        const { error: unlinkError } = await db
           .from('quotes')
           .update({ supplier_id: null })
           .eq('supplier_id', stat.supplier.id)
 
+        if (unlinkError) {
+          console.error(`Error unlinking quotes:`, unlinkError)
+          alert(`Error unlinking quotes: ${unlinkError.message}`)
+          setIsProcessing(false)
+          return
+        }
+
         // Delete supplier
-        await db.from('suppliers').delete().eq('id', stat.supplier.id)
+        console.log(`Deleting supplier record: ${stat.supplier.id}`)
+        const { error: deleteError } = await db
+          .from('suppliers')
+          .delete()
+          .eq('id', stat.supplier.id)
+
+        if (deleteError) {
+          console.error(`Error deleting supplier:`, deleteError)
+          alert(`Error deleting supplier: ${deleteError.message}`)
+          setIsProcessing(false)
+          return
+        }
       }
 
+      console.log('Delete completed successfully')
+      alert('Suppliers deleted successfully!')
       setSelectedSuppliers(new Set())
       setBulkAction(null)
       fetchSuppliers()
     } catch (error) {
       console.error('Error deleting suppliers:', error)
-      alert('Error deleting suppliers')
+      alert(`Error: ${error instanceof Error ? error.message : 'Unknown error'}`)
     } finally {
       setIsProcessing(false)
     }
