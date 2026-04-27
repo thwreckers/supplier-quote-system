@@ -774,12 +774,12 @@ export default function AdminRequestDetail() {
             <div className="flex justify-between items-start">
               <div />
 
-              <div className="flex flex-col gap-2 items-end">
+              <div className="flex flex-col gap-2 items-end w-48">
                 <button
                   onClick={copyLink}
                   disabled={generatingToken}
                   style={{ backgroundColor: '#d32f2f' }}
-                  className="text-sm text-white font-semibold rounded-lg px-4 py-2 hover:opacity-90 transition disabled:opacity-60 shadow-md"
+                  className="w-full text-sm text-white font-semibold rounded-lg px-4 py-2 hover:opacity-90 transition disabled:opacity-60 shadow-md"
                 >
                   {generatingToken ? 'Generating...' : copied ? '✓ Copied!' : '📋 Copy Share Link'}
                 </button>
@@ -787,33 +787,35 @@ export default function AdminRequestDetail() {
                 <button
                   onClick={handleRefresh}
                   disabled={refreshing}
-                  className="text-sm border border-gray-300 rounded-lg px-3 py-2 hover:bg-gray-50 transition text-gray-700 disabled:opacity-60"
+                  style={{ backgroundColor: '#f0f4f8' }}
+                  className="w-full text-sm text-gray-700 font-semibold rounded-lg px-4 py-2 hover:opacity-90 transition disabled:opacity-60 shadow-md"
                   title="Refresh quotes and responses"
                 >
                   {refreshing ? 'Refreshing...' : '🔄 Refresh'}
                 </button>
 
-                <div className="flex items-center gap-2">
-                  <button
-                    onClick={createGroupLink}
-                    disabled={creatingGroupLink}
-                    style={{ backgroundColor: '#2563eb' }}
-                    className="text-sm text-white rounded-lg px-4 py-2 hover:opacity-90 transition disabled:opacity-60 font-semibold shadow-md"
-                  >
-                    {creatingGroupLink ? 'Creating...' : copiedGroup ? '✓ Copied Group Link!' : '👥 Create Group Link'}
-                  </button>
-                  {request?.group_id && (
+                <button
+                  onClick={createGroupLink}
+                  disabled={creatingGroupLink}
+                  style={{ backgroundColor: '#2563eb' }}
+                  className="w-full text-sm text-white font-semibold rounded-lg px-4 py-2 hover:opacity-90 transition disabled:opacity-60 shadow-md"
+                >
+                  {creatingGroupLink ? 'Creating...' : copiedGroup ? '✓ Copied Group Link!' : '👥 Create Group Link'}
+                </button>
+
+                {request?.group_id && (
+                  <div className="flex justify-end">
                     <span className="text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded-full font-medium">
                       {groupLinkClicks} click{groupLinkClicks !== 1 ? 's' : ''}
                     </span>
-                  )}
-                </div>
+                  </div>
+                )}
 
                 <button
                   onClick={toggleStatus}
                   disabled={togglingStatus}
                   style={request.status === 'open' ? { backgroundColor: '#555' } : { backgroundColor: '#d32f2f' }}
-                  className="text-white text-sm px-3 py-1.5 rounded-lg hover:opacity-90 transition disabled:opacity-60"
+                  className="w-full text-white text-sm font-semibold px-4 py-2 rounded-lg hover:opacity-90 transition disabled:opacity-60 shadow-md"
                 >
                   {request.status === 'open' ? 'Close Request' : 'Reopen Request'}
                 </button>
