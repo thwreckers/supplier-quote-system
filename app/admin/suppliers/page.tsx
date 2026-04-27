@@ -273,31 +273,18 @@ export default function SuppliersPage() {
       for (const stat of selectedList) {
         console.log(`Soft-deleting supplier: ${stat.supplier.id}`)
 
-        // Unlink quotes
-        console.log(`Unlinking quotes for supplier: ${stat.supplier.id}`)
-        const { error: unlinkError } = await db
-          .from('quotes')
-          .update({ supplier_id: null })
-          .eq('supplier_id', stat.supplier.id)
-
-        if (unlinkError) {
-          console.error(`Error unlinking quotes:`, unlinkError)
-          alert(`Error unlinking quotes: ${unlinkError.message}`)
-          setIsProcessing(false)
-          return
-        }
-
-        // Mark supplier as deleted by setting merged_into_id to a sentinel value
-        // (merged_into_id = their own ID means "deleted")
+        // Just mark supplier as deleted (don't try to unlink quotes, may have NOT NULL constraint)
         console.log(`Marking supplier as deleted: ${stat.supplier.id}`)
         const { error: deleteError } = await db
           .from('suppliers')
           .update({ merged_into_id: stat.supplier.id })
           .eq('id', stat.supplier.id)
 
+        console.log('Delete result:', { error: deleteError })
+
         if (deleteError) {
           console.error(`Error marking supplier as deleted:`, deleteError)
-          alert(`Error marking supplier: ${deleteError.message}`)
+          alert(`Error: ${deleteError.message}`)
           setIsProcessing(false)
           return
         }
