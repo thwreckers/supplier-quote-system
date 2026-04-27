@@ -216,15 +216,18 @@ export default function AdminPage() {
     if (error) setError(error.message)
     else {
       setRequests(data || [])
-      // Fetch quote counts for each request
+      // Fetch all quotes once and count by request_id
       if (data) {
+        const { data: allQuotes } = await db
+          .from('quotes')
+          .select('request_id')
+
+        // Count quotes by request_id in JavaScript (much faster than N individual queries)
         const counts: { [requestId: string]: number } = {}
-        for (const req of data) {
-          const { count } = await db
-            .from('quotes')
-            .select('*', { count: 'exact', head: true })
-            .eq('request_id', req.id)
-          counts[req.id] = count || 0
+        if (allQuotes) {
+          allQuotes.forEach(quote => {
+            counts[quote.request_id] = (counts[quote.request_id] || 0) + 1
+          })
         }
         setQuoteCounts(counts)
       }
