@@ -243,7 +243,7 @@ export default function SupplierQuotePage() {
         .from('suppliers')
         .select('id')
         .eq('name', supplierName)
-        .single()
+        .maybeSingle()
 
       if (existingSupplier) {
         supplierId = existingSupplier.id
