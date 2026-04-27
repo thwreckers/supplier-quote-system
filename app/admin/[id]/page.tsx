@@ -832,7 +832,9 @@ export default function AdminRequestDetail() {
                   value={request.status}
                   onChange={(e) => updateStatus(e.target.value)}
                   disabled={togglingStatus}
-                  className={`w-full px-4 py-2 rounded-lg text-sm font-semibold text-white transition disabled:opacity-60 shadow-md hover:opacity-90 bg-green-600`}
+                  className={`w-full px-4 py-2 rounded-lg text-sm font-semibold text-white transition disabled:opacity-60 shadow-md hover:opacity-90 ${
+                    darkMode ? 'bg-green-500' : 'bg-green-600'
+                  }`}
                 >
                   <option value="open">Open</option>
                   <option value="awarded">Awarded</option>
