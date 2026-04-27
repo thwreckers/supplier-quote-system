@@ -61,37 +61,75 @@ export default function SuppliersPage() {
     setLoading(true)
     const db = getSupabase()
 
-    // Fetch all suppliers
-    const { data: suppliersData } = await db
-      .from('suppliers')
-      .select('*')
-      .order('name', { ascending: true })
-
-    if (suppliersData) {
-      // Fetch all quotes to calculate stats
-      const { data: quotesData } = await db
+    try {
+      // Get all quotes to see who has submitted
+      const { data: allQuotes } = await db
         .from('quotes')
-        .select('supplier_id, price, created_at')
+        .select('supplier_id, supplier_name, price, created_at')
 
-      // Calculate stats for each supplier
-      const stats: SupplierStats[] = suppliersData.map(supplier => {
-        const supplierQuotes = quotesData?.filter(q => q.supplier_id === supplier.id) || []
-        const avgPrice = supplierQuotes.length > 0
-          ? supplierQuotes.reduce((sum, q) => sum + q.price, 0) / supplierQuotes.length
-          : 0
-        const lastQuoteDate = supplierQuotes.length > 0
-          ? supplierQuotes.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())[0]?.created_at
-          : null
+      if (!allQuotes) {
+        setSuppliers([])
+        setLoading(false)
+        return
+      }
 
-        return {
-          supplier,
-          quoteCount: supplierQuotes.length,
-          avgPrice,
-          lastQuoteDate,
+      // Get unique supplier_name values from quotes
+      const uniqueSupplierNames = [...new Set(allQuotes
+        .map(q => q.supplier_name)
+        .filter(Boolean)
+      )]
+
+      // Get existing suppliers
+      const { data: existingSuppliers } = await db
+        .from('suppliers')
+        .select('*')
+        .order('name', { ascending: true })
+
+      const existingSupplierMap = new Map((existingSuppliers || []).map(s => [s.name, s]))
+      const suppliersToCreate = uniqueSupplierNames.filter(name => !existingSupplierMap.has(name))
+
+      // Create missing suppliers from quote history
+      for (const name of suppliersToCreate) {
+        const { data: newSupplier } = await db
+          .from('suppliers')
+          .insert({ name })
+          .select('*')
+          .single()
+
+        if (newSupplier) {
+          existingSupplierMap.set(newSupplier.name, newSupplier)
         }
-      })
+      }
 
-      setSuppliers(stats)
+      // Fetch updated suppliers list
+      const { data: suppliersData } = await db
+        .from('suppliers')
+        .select('*')
+        .order('name', { ascending: true })
+
+      if (suppliersData) {
+        // Calculate stats for each supplier from quotes
+        const stats: SupplierStats[] = suppliersData.map(supplier => {
+          const supplierQuotes = allQuotes.filter(q => q.supplier_id === supplier.id) || []
+          const avgPrice = supplierQuotes.length > 0
+            ? supplierQuotes.reduce((sum, q) => sum + q.price, 0) / supplierQuotes.length
+            : 0
+          const lastQuoteDate = supplierQuotes.length > 0
+            ? supplierQuotes.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())[0]?.created_at
+            : null
+
+          return {
+            supplier,
+            quoteCount: supplierQuotes.length,
+            avgPrice,
+            lastQuoteDate,
+          }
+        })
+
+        setSuppliers(stats)
+      }
+    } catch (error) {
+      console.error('Error fetching suppliers:', error)
     }
     setLoading(false)
   }
