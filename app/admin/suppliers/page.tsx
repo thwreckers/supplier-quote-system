@@ -236,16 +236,22 @@ export default function SuppliersPage() {
       }
     }
 
-    // Also find fuzzy matches (>85% similarity)
+    // Also find fuzzy matches (>70% similarity or if one name starts with the other)
     for (const supplier1 of allSuppliers) {
       if (supplier1.merged_into_id) continue
       for (const supplier2 of allSuppliers) {
         if (supplier2.merged_into_id || supplier1.id >= supplier2.id) continue
-        const similarity = stringSimilarity(
-          normalizeName(supplier1.name),
-          normalizeName(supplier2.name)
-        )
-        if (similarity > 0.85 && similarity < 1.0) {
+        const name1 = normalizeName(supplier1.name)
+        const name2 = normalizeName(supplier2.name)
+
+        // Check similarity
+        const similarity = stringSimilarity(name1, name2)
+
+        // Check if one name starts with the other (e.g., "Ahmadi Auto" vs "Ahmadi Auto Parts")
+        const isSubstring = name1.startsWith(name2.split(' ')[0] + ' ') ||
+                           name2.startsWith(name1.split(' ')[0] + ' ')
+
+        if ((similarity > 0.7 && similarity < 1.0) || (isSubstring && similarity > 0.65)) {
           // Check if not already in grouped
           const key = `${supplier1.id}-${supplier2.id}`
           if (!seen.has(key)) {
@@ -351,8 +357,9 @@ export default function SuppliersPage() {
   }
 
   const filteredSuppliers = suppliers.filter(s =>
-    s.supplier.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    (s.supplier.company?.toLowerCase().includes(searchQuery.toLowerCase()))
+    !s.supplier.merged_into_id && // Hide merged suppliers
+    (s.supplier.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    (s.supplier.company?.toLowerCase().includes(searchQuery.toLowerCase())))
   )
 
   const totalPages = Math.ceil(filteredSuppliers.length / SUPPLIERS_PER_PAGE)
