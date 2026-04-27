@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { useParams, useRouter } from 'next/navigation'
+import { redirect } from 'next/navigation'
 import { getSupabase, type Request, type Quote, type Token, type CustomField, type SelectedSupplier } from '@/lib/supabase'
 import Lightbox from 'yet-another-react-lightbox'
 import Zoom from 'yet-another-react-lightbox/plugins/zoom'
@@ -76,8 +77,7 @@ export default function AdminRequestDetail() {
 
   // Redirect to suppliers page if accessing /admin/suppliers via this dynamic route
   if (id === 'suppliers') {
-    router.push('/admin/suppliers')
-    return null
+    redirect('/admin/suppliers')
   }
 
   const [request, setRequest] = useState<Request | null>(null)
