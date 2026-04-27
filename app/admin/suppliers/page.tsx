@@ -211,51 +211,46 @@ export default function SuppliersPage() {
   }
 
   function detectDuplicates() {
-    const allSuppliers = suppliers.map(s => s.supplier)
-    const normalized = new Map<string, Supplier[]>()
+    const allSuppliers = suppliers.map(s => s.supplier).filter(s => !s.merged_into_id)
     const grouped: Array<{ primary: Supplier; duplicates: Supplier[] }> = []
     const seen = new Set<string>()
 
-    // Group by normalized name (exact matches)
-    for (const supplier of allSuppliers) {
-      if (supplier.merged_into_id) continue // Skip merged suppliers
-      const norm = normalizeName(supplier.name)
-      if (!normalized.has(norm)) {
-        normalized.set(norm, [])
-      }
-      normalized.get(norm)!.push(supplier)
-    }
+    // Compare all pairs
+    for (let i = 0; i < allSuppliers.length; i++) {
+      for (let j = i + 1; j < allSuppliers.length; j++) {
+        const s1 = allSuppliers[i]
+        const s2 = allSuppliers[j]
+        const name1 = normalizeName(s1.name)
+        const name2 = normalizeName(s2.name)
 
-    // Find groups with multiple suppliers
-    for (const [norm, group] of normalized) {
-      if (group.length > 1) {
-        grouped.push({
-          primary: group[0],
-          duplicates: group.slice(1),
-        })
-      }
-    }
+        let isDuplicate = false
 
-    // Find fuzzy matches (>80% similarity)
-    // Only if the base names (first 2-3 words) are very similar
-    for (const supplier1 of allSuppliers) {
-      if (supplier1.merged_into_id) continue
-      for (const supplier2 of allSuppliers) {
-        if (supplier2.merged_into_id || supplier1.id >= supplier2.id) continue
-        const name1 = normalizeName(supplier1.name)
-        const name2 = normalizeName(supplier2.name)
+        // 1. Exact match (case-insensitive)
+        if (name1 === name2) {
+          isDuplicate = true
+        }
+        // 2. One name contains the other and they're >60% similar
+        else if (name1.includes(name2) || name2.includes(name1)) {
+          const similarity = stringSimilarity(name1, name2)
+          if (similarity > 0.6) {
+            isDuplicate = true
+          }
+        }
+        // 3. High similarity (>75%) - for typos
+        else {
+          const similarity = stringSimilarity(name1, name2)
+          if (similarity > 0.75) {
+            isDuplicate = true
+          }
+        }
 
-        // Only match if similarity is very high (>80%)
-        const similarity = stringSimilarity(name1, name2)
-
-        if (similarity > 0.8 && similarity < 1.0) {
-          // Check if not already in grouped
-          const key = `${supplier1.id}-${supplier2.id}`
+        if (isDuplicate) {
+          const key = `${s1.id}-${s2.id}`
           if (!seen.has(key)) {
             seen.add(key)
             grouped.push({
-              primary: supplier1,
-              duplicates: [supplier2],
+              primary: s1,
+              duplicates: [s2],
             })
           }
         }
