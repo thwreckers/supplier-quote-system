@@ -832,17 +832,17 @@ export default function AdminRequestDetail() {
                   value={request.status}
                   onChange={(e) => updateStatus(e.target.value)}
                   disabled={togglingStatus}
-                  className={`w-full px-4 py-2 rounded-lg text-sm font-semibold text-white transition disabled:opacity-60 ${
+                  className={`w-full px-4 py-2 rounded-lg text-sm font-semibold text-white transition disabled:opacity-60 border-2 ${
                     request.status === 'open'
-                      ? 'bg-green-600 hover:bg-green-700'
+                      ? 'bg-green-600 hover:bg-green-700 border-green-700'
                       : request.status === 'awarded'
-                      ? 'bg-blue-600 hover:bg-blue-700'
+                      ? 'bg-blue-600 hover:bg-blue-700 border-blue-700'
                       : request.status === 'completed'
-                      ? 'bg-purple-600 hover:bg-purple-700'
+                      ? 'bg-purple-600 hover:bg-purple-700 border-purple-700'
                       : request.status === 'archived'
-                      ? 'bg-gray-600 hover:bg-gray-700'
-                      : 'bg-red-600 hover:bg-red-700'
-                  }`}
+                      ? 'bg-gray-600 hover:bg-gray-700 border-gray-700'
+                      : 'bg-red-600 hover:bg-red-700 border-red-700'
+                  } ${darkMode ? 'shadow-lg ring-2 ring-offset-2 ring-offset-slate-900 ring-opacity-50' : ''}`}
                 >
                   <option value="open">Open</option>
                   <option value="awarded">Awarded</option>
