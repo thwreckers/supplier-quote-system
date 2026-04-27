@@ -180,8 +180,21 @@ export default function AdminPage() {
   const [bulkDeleting, setBulkDeleting] = useState(false)
   const [bulkClosing, setBulkClosing] = useState(false)
 
-  // Dark mode state
+  // Dark mode state with localStorage persistence
   const [darkMode, setDarkMode] = useState(false)
+
+  // Load dark mode preference from localStorage on mount
+  useEffect(() => {
+    const savedDarkMode = localStorage.getItem('darkMode')
+    if (savedDarkMode !== null) {
+      setDarkMode(JSON.parse(savedDarkMode))
+    }
+  }, [])
+
+  // Save dark mode preference to localStorage when it changes
+  useEffect(() => {
+    localStorage.setItem('darkMode', JSON.stringify(darkMode))
+  }, [darkMode])
 
   // Search, filter, and pagination state
   const [searchQuery, setSearchQuery] = useState('')

@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
-import { useParams } from 'next/navigation'
+import { useParams, useRouter } from 'next/navigation'
 import { getSupabase, type Request, type Quote, type Token, type CustomField, type SelectedSupplier } from '@/lib/supabase'
 import Lightbox from 'yet-another-react-lightbox'
 import Zoom from 'yet-another-react-lightbox/plugins/zoom'
@@ -72,6 +72,14 @@ const modernStyles = `
 
 export default function AdminRequestDetail() {
   const { id } = useParams<{ id: string }>()
+  const router = useRouter()
+
+  // Redirect to suppliers page if accessing /admin/suppliers via this dynamic route
+  if (id === 'suppliers') {
+    router.push('/admin/suppliers')
+    return null
+  }
+
   const [request, setRequest] = useState<Request | null>(null)
   const [quotes, setQuotes] = useState<Quote[]>([])
   const [loading, setLoading] = useState(true)

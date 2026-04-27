@@ -40,6 +40,19 @@ export default function SuppliersPage() {
   const [page, setPage] = useState(1)
   const SUPPLIERS_PER_PAGE = 25
 
+  // Load dark mode preference from localStorage on mount
+  useEffect(() => {
+    const savedDarkMode = localStorage.getItem('darkMode')
+    if (savedDarkMode !== null) {
+      setDarkMode(JSON.parse(savedDarkMode))
+    }
+  }, [])
+
+  // Save dark mode preference to localStorage when it changes
+  useEffect(() => {
+    localStorage.setItem('darkMode', JSON.stringify(darkMode))
+  }, [darkMode])
+
   useEffect(() => {
     fetchSuppliers()
   }, [])
