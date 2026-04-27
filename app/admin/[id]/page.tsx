@@ -637,7 +637,7 @@ export default function AdminRequestDetail() {
         <div className={`rounded-lg border p-6 mb-6 shadow-sm ${darkMode ? 'bg-slate-800 border-slate-700' : 'bg-white border-gray-200'}`}>
           <div className="flex items-start justify-between gap-4 flex-wrap">
             <div>
-              <div className="flex items-center gap-2 mb-1">
+              <div className="flex items-center gap-2 mb-1 flex-wrap">
                 <h1 className={`text-xl font-bold ${darkMode ? 'text-gray-100' : 'text-gray-900'}`}>{request.title}</h1>
                 <span
                   className={`text-xs font-medium px-2 py-0.5 rounded-full ${
@@ -648,6 +648,11 @@ export default function AdminRequestDetail() {
                 >
                   {request.status}
                 </span>
+                {request?.group_id && (
+                  <span className="text-xs bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full font-medium">
+                    {groupLinkClicks} click{groupLinkClicks !== 1 ? 's' : ''}
+                  </span>
+                )}
               </div>
               {request.description && (
                 <p className={`text-sm mt-1 ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>{request.description}</p>
@@ -785,16 +790,6 @@ export default function AdminRequestDetail() {
                 </button>
 
                 <button
-                  onClick={handleRefresh}
-                  disabled={refreshing}
-                  style={{ backgroundColor: '#f0f4f8' }}
-                  className="w-full text-sm text-gray-700 font-semibold rounded-lg px-4 py-2 hover:opacity-90 transition disabled:opacity-60 shadow-md"
-                  title="Refresh quotes and responses"
-                >
-                  {refreshing ? 'Refreshing...' : '🔄 Refresh'}
-                </button>
-
-                <button
                   onClick={createGroupLink}
                   disabled={creatingGroupLink}
                   style={{ backgroundColor: '#2563eb' }}
@@ -803,23 +798,27 @@ export default function AdminRequestDetail() {
                   {creatingGroupLink ? 'Creating...' : copiedGroup ? '✓ Copied Group Link!' : '👥 Create Group Link'}
                 </button>
 
-                {request?.group_id && (
-                  <div className="flex justify-end">
-                    <span className="text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded-full font-medium">
-                      {groupLinkClicks} click{groupLinkClicks !== 1 ? 's' : ''}
-                    </span>
-                  </div>
-                )}
-
                 <button
-                  onClick={toggleStatus}
-                  disabled={togglingStatus}
-                  style={request.status === 'open' ? { backgroundColor: '#555' } : { backgroundColor: '#d32f2f' }}
-                  className="w-full text-white text-sm font-semibold px-4 py-2 rounded-lg hover:opacity-90 transition disabled:opacity-60 shadow-md"
+                  onClick={handleRefresh}
+                  disabled={refreshing}
+                  style={{ backgroundColor: '#f0f4f8' }}
+                  className="w-full text-sm text-gray-700 font-semibold rounded-lg px-4 py-2 hover:opacity-90 transition disabled:opacity-60 shadow-md"
+                  title="Refresh quotes and responses"
                 >
-                  {request.status === 'open' ? 'Close Request' : 'Reopen Request'}
+                  {refreshing ? 'Refreshing...' : '🔄 Refresh'}
                 </button>
               </div>
+            </div>
+
+            <div className="mt-6 pt-6 border-t border-gray-200">
+              <button
+                onClick={toggleStatus}
+                disabled={togglingStatus}
+                style={request.status === 'open' ? { backgroundColor: '#555' } : { backgroundColor: '#d32f2f' }}
+                className="w-full text-white text-sm font-semibold px-4 py-2 rounded-lg hover:opacity-90 transition disabled:opacity-60 shadow-md"
+              >
+                {request.status === 'open' ? 'Close Request' : 'Reopen Request'}
+              </button>
             </div>
 
             <div className={`mt-6 pt-6 border-t w-full ${darkMode ? 'border-slate-700' : 'border-gray-200'}`}>
