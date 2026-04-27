@@ -22,6 +22,18 @@ export type Customer = {
   created_at: string
 }
 
+export type Supplier = {
+  id: string
+  name: string
+  company: string | null
+  email: string | null
+  phone: string | null
+  notes: string | null
+  rating: number | null
+  created_at: string
+  updated_at: string
+}
+
 export type CustomField = {
   id: string
   name: string
@@ -46,7 +58,7 @@ export type Request = {
   created_at: string
   title: string
   description: string
-  status: 'open' | 'closed'
+  status: 'open' | 'closed' | 'awarded' | 'completed' | 'archived'
   expires_at: string | null
   customer_details: string | null
   customer_id: string | null
@@ -61,6 +73,7 @@ export type Quote = {
   id: string
   request_id: string
   supplier_name: string
+  supplier_id: string | null
   price: number
   condition: 'New' | 'Used' | 'Reconditioned'
   notes: string

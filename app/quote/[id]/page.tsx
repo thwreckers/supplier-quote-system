@@ -236,11 +236,40 @@ export default function SupplierQuotePage() {
       return sum + (isNaN(price) ? 0 : price * qty)
     }, 0) || 0
 
+    // Auto-capture supplier: check if supplier exists, create if not
+    let supplierId: string | null = null
+    try {
+      const { data: existingSupplier } = await getSupabase()
+        .from('suppliers')
+        .select('id')
+        .eq('name', supplierName)
+        .single()
+
+      if (existingSupplier) {
+        supplierId = existingSupplier.id
+      } else {
+        // Create new supplier
+        const { data: newSupplier, error: supplierError } = await getSupabase()
+          .from('suppliers')
+          .insert({ name: supplierName })
+          .select('id')
+          .single()
+
+        if (!supplierError && newSupplier) {
+          supplierId = newSupplier.id
+        }
+      }
+    } catch (error) {
+      // Supplier lookup failed, continue without supplier_id
+      console.error('Error capturing supplier:', error)
+    }
+
     const { data: newQuote, error: insertError } = await getSupabase()
       .from('quotes')
       .insert({
         request_id: id,
         supplier_name: supplierName,
+        supplier_id: supplierId,
         price: totalPrice,
         condition,
         notes: '',
