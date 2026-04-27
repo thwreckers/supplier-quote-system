@@ -40,6 +40,17 @@ export default function SuppliersPage() {
   const [page, setPage] = useState(1)
   const SUPPLIERS_PER_PAGE = 10
 
+  // Edit modal state
+  const [editingSupplier, setEditingSupplier] = useState<Supplier | null>(null)
+  const [editFormData, setEditFormData] = useState({
+    name: '',
+    company: '',
+    email: '',
+    phone: '',
+    notes: '',
+  })
+  const [isSaving, setIsSaving] = useState(false)
+
   // Load dark mode preference from localStorage on mount
   useEffect(() => {
     const savedDarkMode = localStorage.getItem('darkMode')
@@ -150,6 +161,54 @@ export default function SuppliersPage() {
     }
   }
 
+  function openEditModal(supplier: Supplier) {
+    setEditingSupplier(supplier)
+    setEditFormData({
+      name: supplier.name || '',
+      company: supplier.company || '',
+      email: supplier.email || '',
+      phone: supplier.phone || '',
+      notes: supplier.notes || '',
+    })
+  }
+
+  function closeEditModal() {
+    setEditingSupplier(null)
+    setEditFormData({ name: '', company: '', email: '', phone: '', notes: '' })
+  }
+
+  async function saveSupplier() {
+    if (!editingSupplier) return
+    if (!editFormData.name.trim()) {
+      alert('Supplier name is required')
+      return
+    }
+
+    setIsSaving(true)
+    try {
+      const db = getSupabase()
+      await db
+        .from('suppliers')
+        .update({
+          name: editFormData.name,
+          company: editFormData.company || null,
+          email: editFormData.email || null,
+          phone: editFormData.phone || null,
+          notes: editFormData.notes || null,
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', editingSupplier.id)
+
+      closeEditModal()
+      fetchSuppliers()
+    } catch (error) {
+      console.error('Error saving supplier:', error)
+      alert('Error saving supplier')
+    } finally {
+      setIsSaving(false)
+    }
+  }
+
   const filteredSuppliers = suppliers.filter(s =>
     s.supplier.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
     (s.supplier.company?.toLowerCase().includes(searchQuery.toLowerCase()))
@@ -238,12 +297,12 @@ export default function SuppliersPage() {
                         {stat.lastQuoteDate ? new Date(stat.lastQuoteDate).toLocaleDateString() : '—'}
                       </td>
                       <td className="px-4 py-3 text-center space-x-2 flex justify-center">
-                        <Link
-                          href={`/admin/suppliers/${stat.supplier.id}`}
+                        <button
+                          onClick={() => openEditModal(stat.supplier)}
                           className="text-xs text-blue-600 hover:text-blue-800 font-medium"
                         >
                           Edit
-                        </Link>
+                        </button>
                         <button
                           onClick={() => deleteSupplier(stat.supplier.id)}
                           className="text-xs text-red-600 hover:text-red-800 font-medium"
@@ -292,6 +351,115 @@ export default function SuppliersPage() {
           </>
         )}
       </main>
+
+      {/* Edit Modal */}
+      {editingSupplier && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className={`rounded-lg shadow-xl max-w-md w-full p-6 ${darkMode ? 'bg-slate-800' : 'bg-white'}`}>
+            <h2 className={`text-lg font-bold mb-4 ${darkMode ? 'text-gray-100' : 'text-gray-900'}`}>
+              Edit Supplier
+            </h2>
+
+            <div className="space-y-4">
+              {/* Name */}
+              <div>
+                <label className={`block text-sm font-medium mb-1 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                  Name <span style={{ color: '#d32f2f' }}>*</span>
+                </label>
+                <input
+                  type="text"
+                  value={editFormData.name}
+                  onChange={(e) => setEditFormData({ ...editFormData, name: e.target.value })}
+                  className={`w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-red-300 ${
+                    darkMode ? 'bg-slate-700 border-slate-600 text-white' : 'border-gray-300'
+                  }`}
+                />
+              </div>
+
+              {/* Company */}
+              <div>
+                <label className={`block text-sm font-medium mb-1 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                  Company
+                </label>
+                <input
+                  type="text"
+                  value={editFormData.company}
+                  onChange={(e) => setEditFormData({ ...editFormData, company: e.target.value })}
+                  className={`w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-red-300 ${
+                    darkMode ? 'bg-slate-700 border-slate-600 text-white' : 'border-gray-300'
+                  }`}
+                />
+              </div>
+
+              {/* Email */}
+              <div>
+                <label className={`block text-sm font-medium mb-1 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                  Email
+                </label>
+                <input
+                  type="email"
+                  value={editFormData.email}
+                  onChange={(e) => setEditFormData({ ...editFormData, email: e.target.value })}
+                  className={`w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-red-300 ${
+                    darkMode ? 'bg-slate-700 border-slate-600 text-white' : 'border-gray-300'
+                  }`}
+                />
+              </div>
+
+              {/* Phone */}
+              <div>
+                <label className={`block text-sm font-medium mb-1 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                  Phone
+                </label>
+                <input
+                  type="tel"
+                  value={editFormData.phone}
+                  onChange={(e) => setEditFormData({ ...editFormData, phone: e.target.value })}
+                  className={`w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-red-300 ${
+                    darkMode ? 'bg-slate-700 border-slate-600 text-white' : 'border-gray-300'
+                  }`}
+                />
+              </div>
+
+              {/* Notes */}
+              <div>
+                <label className={`block text-sm font-medium mb-1 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                  Notes
+                </label>
+                <textarea
+                  value={editFormData.notes}
+                  onChange={(e) => setEditFormData({ ...editFormData, notes: e.target.value })}
+                  rows={3}
+                  className={`w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-red-300 ${
+                    darkMode ? 'bg-slate-700 border-slate-600 text-white' : 'border-gray-300'
+                  }`}
+                />
+              </div>
+            </div>
+
+            {/* Buttons */}
+            <div className="flex gap-2 mt-6">
+              <button
+                onClick={saveSupplier}
+                disabled={isSaving}
+                style={{ backgroundColor: '#d32f2f' }}
+                className="flex-1 text-white py-2 rounded-lg font-medium hover:opacity-90 disabled:opacity-50"
+              >
+                {isSaving ? 'Saving...' : 'Save Changes'}
+              </button>
+              <button
+                onClick={closeEditModal}
+                disabled={isSaving}
+                className={`flex-1 py-2 rounded-lg font-medium ${
+                  darkMode ? 'bg-slate-700 text-white hover:bg-slate-600' : 'bg-gray-200 text-gray-900 hover:bg-gray-300'
+                } disabled:opacity-50`}
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
