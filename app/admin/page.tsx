@@ -590,6 +590,13 @@ export default function AdminPage() {
         <div className="max-w-7xl mx-auto flex items-center justify-between">
           <h1 className="text-2xl font-bold tracking-tight">Supplier Quote System</h1>
           <div className="flex items-center gap-4">
+            <Link
+              href="/admin/suppliers"
+              className="px-3 py-2 rounded-lg hover:bg-white hover:bg-opacity-20 transition-all text-sm font-medium"
+              title="View Suppliers"
+            >
+              Suppliers
+            </Link>
             <button
               onClick={() => setDarkMode(!darkMode)}
               className="p-2 rounded-lg hover:bg-white hover:bg-opacity-20 transition-all"
