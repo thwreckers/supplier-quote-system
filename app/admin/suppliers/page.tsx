@@ -152,14 +152,16 @@ export default function SuppliersPage() {
   }
 
   async function deleteSupplier(supplierId: string) {
-    if (!confirm('Delete this supplier? Their quotes will be unlinked.')) return
+    if (!confirm('Delete this supplier? Their quotes will be unlinked automatically.')) return
 
     try {
       const db = getSupabase()
-      // Unlink quotes
-      await db.from('quotes').update({ supplier_id: null }).eq('supplier_id', supplierId)
-      // Delete supplier
-      await db.from('suppliers').delete().eq('id', supplierId)
+      const { error } = await db.from('suppliers').delete().eq('id', supplierId)
+      if (error) {
+        console.error('Error deleting supplier:', error)
+        alert(`Error: ${error.message}`)
+        return
+      }
       fetchSuppliers()
     } catch (error) {
       console.error('Error deleting supplier:', error)
@@ -169,14 +171,11 @@ export default function SuppliersPage() {
 
   // Bulk actions functions
   function toggleSupplierSelection(supplierId: string) {
-    console.log(`Toggle selection for: ${supplierId}`)
     const newSelected = new Set(selectedSuppliers)
     if (newSelected.has(supplierId)) {
       newSelected.delete(supplierId)
-      console.log(`Deselected, now ${newSelected.size} selected`)
     } else {
       newSelected.add(supplierId)
-      console.log(`Selected, now ${newSelected.size} selected`)
     }
     setSelectedSuppliers(newSelected)
   }
@@ -255,28 +254,15 @@ export default function SuppliersPage() {
   }
 
   async function bulkDelete() {
-    console.log('=== BULK DELETE START ===')
-
     if (selectedSuppliers.size === 0) {
       alert('Please select suppliers to delete')
       return
     }
 
     const selectedList = paginatedSuppliers.filter(s => selectedSuppliers.has(s.supplier.id))
+    const names = selectedList.map(s => `"${s.supplier.name}"`).join(', ')
 
-    // Check if any have quotes
-    const withQuotes = selectedList.filter(s => s.quoteCount > 0)
-    const withoutQuotes = selectedList.filter(s => s.quoteCount === 0)
-
-    if (withQuotes.length > 0) {
-      const names = withQuotes.map(s => `"${s.supplier.name}"`).join(', ')
-      alert(`Cannot delete ${names} - they have quotes.\n\nMerge them instead to consolidate.`)
-      return
-    }
-
-    const names = withoutQuotes.map(s => `"${s.supplier.name}"`).join(', ')
-
-    if (!window.confirm(`Delete ${withoutQuotes.length} supplier(s): ${names}?`)) {
+    if (!window.confirm(`Delete ${selectedList.length} supplier(s): ${names}?\n\nTheir quotes will be automatically unlinked.`)) {
       return
     }
 
@@ -284,30 +270,22 @@ export default function SuppliersPage() {
     try {
       const db = getSupabase()
 
-      for (const stat of withoutQuotes) {
-        console.log(`Deleting supplier: ${stat.supplier.id} (${stat.supplier.name})`)
-
+      for (const stat of selectedList) {
         const { error } = await db
           .from('suppliers')
           .delete()
           .eq('id', stat.supplier.id)
 
         if (error) {
-          console.error(`Error deleting ${stat.supplier.name}:`, error)
-          alert(`Error: ${error.message}`)
+          alert(`Error deleting "${stat.supplier.name}": ${error.message}`)
           setIsProcessing(false)
           return
         }
-
-        console.log(`✓ Deleted ${stat.supplier.name}`)
       }
 
-      console.log('=== BULK DELETE SUCCESS ===')
-      alert('Suppliers deleted successfully!')
       setSelectedSuppliers(new Set())
       await fetchSuppliers()
     } catch (error) {
-      console.error('=== BULK DELETE ERROR ===', error)
       alert(`Error: ${error instanceof Error ? error.message : 'Unknown error'}`)
     } finally {
       setIsProcessing(false)
