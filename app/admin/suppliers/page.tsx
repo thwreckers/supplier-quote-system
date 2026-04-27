@@ -169,11 +169,14 @@ export default function SuppliersPage() {
 
   // Bulk actions functions
   function toggleSupplierSelection(supplierId: string) {
+    console.log(`Toggle selection for: ${supplierId}`)
     const newSelected = new Set(selectedSuppliers)
     if (newSelected.has(supplierId)) {
       newSelected.delete(supplierId)
+      console.log(`Deselected, now ${newSelected.size} selected`)
     } else {
       newSelected.add(supplierId)
+      console.log(`Selected, now ${newSelected.size} selected`)
     }
     setSelectedSuppliers(newSelected)
   }
