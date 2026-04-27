@@ -183,6 +183,14 @@ export default function AdminPage() {
   // Dark mode state
   const [darkMode, setDarkMode] = useState(false)
 
+  // Search, filter, and pagination state
+  const [searchQuery, setSearchQuery] = useState('')
+  const [filterStatus, setFilterStatus] = useState<string>('all')
+  const [filterDateFrom, setFilterDateFrom] = useState('')
+  const [filterDateTo, setFilterDateTo] = useState('')
+  const [page, setPage] = useState(1)
+  const REQUESTS_PER_PAGE = 25
+
   // Edit customer state
   const [editingCustomerId, setEditingCustomerId] = useState<string | null>(null)
   const [editCustomerName, setEditCustomerName] = useState('')
@@ -535,9 +543,37 @@ export default function AdminPage() {
   }
 
   // Get filtered requests based on selected customer
-  const filteredRequests = selectedCustomerId
-    ? requests.filter(req => req.customer_id === selectedCustomerId)
-    : requests
+  // Filter requests by search, status, date, and customer
+  const allFilteredRequests = requests.filter(req => {
+    // Customer filter
+    if (selectedCustomerId && req.customer_id !== selectedCustomerId) {
+      return false
+    }
+
+    // Search filter
+    const matchesSearch = searchQuery === '' ||
+      req.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (req.customer_details?.toLowerCase().includes(searchQuery.toLowerCase())) ||
+      (req.customer_id && customers.find(c => c.id === req.customer_id)?.name.toLowerCase().includes(searchQuery.toLowerCase()))
+
+    // Status filter
+    const matchesStatus = filterStatus === 'all' || req.status === filterStatus
+
+    // Date range filter
+    const createdDate = new Date(req.created_at)
+    const matchesDate =
+      (!filterDateFrom || createdDate >= new Date(filterDateFrom)) &&
+      (!filterDateTo || createdDate <= new Date(filterDateTo))
+
+    return matchesSearch && matchesStatus && matchesDate
+  })
+
+  // Pagination
+  const totalPages = Math.ceil(allFilteredRequests.length / REQUESTS_PER_PAGE)
+  const filteredRequests = allFilteredRequests.slice(
+    (page - 1) * REQUESTS_PER_PAGE,
+    page * REQUESTS_PER_PAGE
+  )
 
   // Get filtered customers based on search
   const filteredCustomers = customers.filter(c =>
@@ -1036,10 +1072,58 @@ export default function AdminPage() {
           </div>
         )}
 
+        {/* Search, Filter, and Pagination Controls */}
+        <div className={`mb-6 p-4 rounded-lg border ${darkMode ? 'bg-slate-800 border-slate-700' : 'bg-white border-gray-200'}`}>
+          <div className="space-y-3">
+            <div>
+              <input
+                type="text"
+                placeholder="Search by title, customer..."
+                value={searchQuery}
+                onChange={(e) => {
+                  setSearchQuery(e.target.value)
+                  setPage(1)  // Reset to page 1 when searching
+                }}
+                className={`w-full px-4 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-red-300 ${darkMode ? 'bg-slate-700 border-slate-600 text-white' : 'border-gray-300'}`}
+              />
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-2">
+              <select value={filterStatus} onChange={(e) => {
+                setFilterStatus(e.target.value)
+                setPage(1)
+              }} className={`px-3 py-2 border rounded-lg text-sm ${darkMode ? 'bg-slate-700 border-slate-600 text-white' : 'border-gray-300'}`}>
+                <option value="all">All Status</option>
+                <option value="open">Open</option>
+                <option value="awarded">Awarded</option>
+                <option value="completed">Completed</option>
+                <option value="archived">Archived</option>
+                <option value="closed">Closed</option>
+              </select>
+              <input type="date" value={filterDateFrom} onChange={(e) => {
+                setFilterDateFrom(e.target.value)
+                setPage(1)
+              }} className={`px-3 py-2 border rounded-lg text-sm ${darkMode ? 'bg-slate-700 border-slate-600 text-white' : 'border-gray-300'}`} />
+              <input type="date" value={filterDateTo} onChange={(e) => {
+                setFilterDateTo(e.target.value)
+                setPage(1)
+              }} className={`px-3 py-2 border rounded-lg text-sm ${darkMode ? 'bg-slate-700 border-slate-600 text-white' : 'border-gray-300'}`} />
+              <button onClick={() => {
+                setSearchQuery('')
+                setFilterStatus('all')
+                setFilterDateFrom('')
+                setFilterDateTo('')
+                setPage(1)
+              }} className={`px-3 py-2 border rounded-lg text-sm font-medium transition ${darkMode ? 'bg-slate-700 border-slate-600 text-gray-300 hover:bg-slate-600' : 'border-gray-300 hover:bg-gray-50'}`}>
+                Clear Filters
+              </button>
+            </div>
+          </div>
+        </div>
+
           {/* Requests list */}
           {loading ? (
             <p className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>Loading...</p>
-          ) : filteredRequests.length === 0 ? (
+          ) : allFilteredRequests.length === 0 ? (
             <div className={`card ${darkMode ? 'bg-slate-800 border-slate-700' : 'bg-white border-gray-200'} p-8 text-center`}>
               <p className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
                 {selectedCustomerId ? 'No requests for this customer.' : 'No requests yet. Create your first one above.'}
@@ -1209,6 +1293,39 @@ export default function AdminPage() {
                 </div>
               ))}
               </div>
+
+              {/* Pagination Controls */}
+              {totalPages > 1 && (
+                <div className={`flex items-center justify-between mt-6 p-4 rounded-lg border ${darkMode ? 'bg-slate-800 border-slate-700' : 'bg-white border-gray-200'}`}>
+                  <p className={`text-sm font-medium ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                    Page {page} of {totalPages} ({allFilteredRequests.length} total)
+                  </p>
+                  <div className="flex gap-2">
+                    <button
+                      onClick={() => setPage(Math.max(1, page - 1))}
+                      disabled={page === 1}
+                      className={`px-3 py-2 border rounded-lg text-sm font-medium transition ${
+                        page === 1
+                          ? darkMode ? 'bg-slate-700 border-slate-600 text-gray-500 cursor-not-allowed' : 'bg-gray-100 border-gray-300 text-gray-500 cursor-not-allowed'
+                          : darkMode ? 'bg-slate-700 border-slate-600 text-white hover:bg-slate-600' : 'border-gray-300 hover:bg-gray-50'
+                      }`}
+                    >
+                      ← Previous
+                    </button>
+                    <button
+                      onClick={() => setPage(Math.min(totalPages, page + 1))}
+                      disabled={page === totalPages}
+                      className={`px-3 py-2 border rounded-lg text-sm font-medium transition ${
+                        page === totalPages
+                          ? darkMode ? 'bg-slate-700 border-slate-600 text-gray-500 cursor-not-allowed' : 'bg-gray-100 border-gray-300 text-gray-500 cursor-not-allowed'
+                          : darkMode ? 'bg-slate-700 border-slate-600 text-white hover:bg-slate-600' : 'border-gray-300 hover:bg-gray-50'
+                      }`}
+                    >
+                      Next →
+                    </button>
+                  </div>
+                </div>
+              )}
             </>
           )}
         </div>
