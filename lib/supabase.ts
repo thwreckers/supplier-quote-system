@@ -30,6 +30,7 @@ export type Supplier = {
   phone: string | null
   notes: string | null
   rating: number | null
+  merged_into_id: string | null
   created_at: string
   updated_at: string
 }

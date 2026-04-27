@@ -52,6 +52,12 @@ export default function SuppliersPage() {
   const [isSaving, setIsSaving] = useState(false)
   const [saveMessage, setSaveMessage] = useState<string | null>(null)
 
+  // Duplicate detection state
+  const [showDuplicates, setShowDuplicates] = useState(false)
+  const [potentialDuplicates, setPotentialDuplicates] = useState<Array<{ primary: Supplier; duplicates: Supplier[] }>>([])
+  const [mergeState, setMergeState] = useState<{ primary: Supplier; duplicate: Supplier } | null>(null)
+  const [isMerging, setIsMerging] = useState(false)
+
   // Load dark mode preference from localStorage on mount
   useEffect(() => {
     const savedDarkMode = localStorage.getItem('darkMode')
@@ -162,6 +168,134 @@ export default function SuppliersPage() {
     }
   }
 
+  // Helper functions for duplicate detection
+  function normalizeName(name: string): string {
+    return name.toLowerCase().trim().replace(/\s+/g, ' ')
+  }
+
+  function levenshteinDistance(a: string, b: string): number {
+    const aLen = a.length
+    const bLen = b.length
+    const matrix: number[][] = []
+
+    for (let i = 0; i <= bLen; i++) {
+      matrix[i] = [i]
+    }
+    for (let j = 0; j <= aLen; j++) {
+      matrix[0][j] = j
+    }
+
+    for (let i = 1; i <= bLen; i++) {
+      for (let j = 1; j <= aLen; j++) {
+        if (b[i - 1] === a[j - 1]) {
+          matrix[i][j] = matrix[i - 1][j - 1]
+        } else {
+          matrix[i][j] = Math.min(
+            matrix[i - 1][j - 1] + 1,
+            matrix[i][j - 1] + 1,
+            matrix[i - 1][j] + 1
+          )
+        }
+      }
+    }
+    return matrix[bLen][aLen]
+  }
+
+  function stringSimilarity(a: string, b: string): number {
+    const longer = a.length > b.length ? a : b
+    const shorter = a.length > b.length ? b : a
+    const longerLength = longer.length
+    if (longerLength === 0) return 1.0
+    const editDistance = levenshteinDistance(longer, shorter)
+    return (longerLength - editDistance) / longerLength
+  }
+
+  function detectDuplicates() {
+    const allSuppliers = suppliers.map(s => s.supplier)
+    const normalized = new Map<string, Supplier[]>()
+    const grouped: Array<{ primary: Supplier; duplicates: Supplier[] }> = []
+    const seen = new Set<string>()
+
+    // Group by normalized name (exact matches)
+    for (const supplier of allSuppliers) {
+      if (supplier.merged_into_id) continue // Skip merged suppliers
+      const norm = normalizeName(supplier.name)
+      if (!normalized.has(norm)) {
+        normalized.set(norm, [])
+      }
+      normalized.get(norm)!.push(supplier)
+    }
+
+    // Find groups with multiple suppliers
+    for (const [norm, group] of normalized) {
+      if (group.length > 1) {
+        grouped.push({
+          primary: group[0],
+          duplicates: group.slice(1),
+        })
+      }
+    }
+
+    // Also find fuzzy matches (>85% similarity)
+    for (const supplier1 of allSuppliers) {
+      if (supplier1.merged_into_id) continue
+      for (const supplier2 of allSuppliers) {
+        if (supplier2.merged_into_id || supplier1.id >= supplier2.id) continue
+        const similarity = stringSimilarity(
+          normalizeName(supplier1.name),
+          normalizeName(supplier2.name)
+        )
+        if (similarity > 0.85 && similarity < 1.0) {
+          // Check if not already in grouped
+          const key = `${supplier1.id}-${supplier2.id}`
+          if (!seen.has(key)) {
+            seen.add(key)
+            grouped.push({
+              primary: supplier1,
+              duplicates: [supplier2],
+            })
+          }
+        }
+      }
+    }
+
+    setPotentialDuplicates(grouped)
+    setShowDuplicates(true)
+  }
+
+  async function mergeDuplicates(primary: Supplier, duplicate: Supplier) {
+    if (!window.confirm(`Merge "${duplicate.name}" into "${primary.name}"? All quotes will be reassigned.`)) {
+      return
+    }
+
+    setIsMerging(true)
+    try {
+      const db = getSupabase()
+
+      // Update all quotes from duplicate to primary
+      await db
+        .from('quotes')
+        .update({ supplier_id: primary.id })
+        .eq('supplier_id', duplicate.id)
+
+      // Mark duplicate as merged
+      await db
+        .from('suppliers')
+        .update({ merged_into_id: primary.id })
+        .eq('id', duplicate.id)
+
+      // Refresh data
+      setMergeState(null)
+      setShowDuplicates(false)
+      fetchSuppliers()
+    } catch (error) {
+      console.error('Error merging suppliers:', error)
+      alert('Error merging suppliers')
+    } finally {
+      setIsMerging(false)
+    }
+  }
+
   function toggleEditRow(supplier: Supplier) {
     if (editingId === supplier.id) {
       setEditingId(null)
@@ -252,8 +386,8 @@ export default function SuppliersPage() {
       </header>
 
       <main className="max-w-7xl mx-auto px-4 py-8">
-        {/* Search */}
-        <div className="mb-6">
+        {/* Search and Actions */}
+        <div className="mb-6 space-y-3">
           <input
             type="text"
             placeholder="Search suppliers by name or company..."
@@ -266,6 +400,13 @@ export default function SuppliersPage() {
               darkMode ? 'bg-slate-800 border-slate-700 text-white' : 'border-gray-300'
             }`}
           />
+          <button
+            onClick={detectDuplicates}
+            style={{ backgroundColor: '#d32f2f' }}
+            className="text-white px-4 py-2 rounded-lg text-sm font-medium hover:opacity-90"
+          >
+            🔍 Find Duplicates
+          </button>
         </div>
 
         {/* Suppliers Table */}
@@ -474,6 +615,77 @@ export default function SuppliersPage() {
               </div>
             )}
           </>
+        )}
+
+        {/* Duplicates Modal */}
+        {showDuplicates && (
+          <div className={`mt-6 p-4 rounded-lg border ${darkMode ? 'bg-slate-800 border-slate-600' : 'bg-yellow-50 border-yellow-200'}`}>
+            <div className="flex items-center justify-between mb-4">
+              <h2 className={`text-lg font-bold ${darkMode ? 'text-yellow-400' : 'text-yellow-800'}`}>
+                ⚠️ Potential Duplicates Found
+              </h2>
+              <button
+                onClick={() => setShowDuplicates(false)}
+                className={`text-sm font-medium ${darkMode ? 'text-gray-400 hover:text-gray-300' : 'text-gray-600 hover:text-gray-900'}`}
+              >
+                Close
+              </button>
+            </div>
+
+            {potentialDuplicates.length === 0 ? (
+              <p className={darkMode ? 'text-gray-400' : 'text-gray-600'}>
+                No duplicates detected. Your supplier names look good!
+              </p>
+            ) : (
+              <div className="space-y-4">
+                {potentialDuplicates.map((group, idx) => (
+                  <div
+                    key={idx}
+                    className={`p-3 rounded border ${darkMode ? 'bg-slate-700 border-slate-600' : 'bg-white border-yellow-300'}`}
+                  >
+                    <p className={`text-sm font-medium mb-2 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                      Match Group {idx + 1}
+                    </p>
+
+                    <div className="space-y-2">
+                      {/* Primary */}
+                      <div className={`p-2 rounded ${darkMode ? 'bg-slate-600' : 'bg-green-50'}`}>
+                        <p className={`text-xs font-medium ${darkMode ? 'text-green-400' : 'text-green-700'}`}>
+                          ✓ Primary (keep)
+                        </p>
+                        <p className={`text-sm ${darkMode ? 'text-gray-100' : 'text-gray-900'}`}>
+                          {group.primary.name}
+                        </p>
+                      </div>
+
+                      {/* Duplicates */}
+                      {group.duplicates.map((dup) => (
+                        <div key={dup.id} className={`p-2 rounded ${darkMode ? 'bg-slate-600' : 'bg-red-50'}`}>
+                          <div className="flex items-center justify-between">
+                            <div>
+                              <p className={`text-xs font-medium ${darkMode ? 'text-red-400' : 'text-red-700'}`}>
+                                ✗ Duplicate
+                              </p>
+                              <p className={`text-sm ${darkMode ? 'text-gray-100' : 'text-gray-900'}`}>
+                                {dup.name}
+                              </p>
+                            </div>
+                            <button
+                              onClick={() => mergeDuplicates(group.primary, dup)}
+                              disabled={isMerging}
+                              className="text-xs bg-red-600 text-white px-2 py-1 rounded hover:bg-red-700 disabled:opacity-50"
+                            >
+                              {isMerging ? 'Merging...' : 'Merge'}
+                            </button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
         )}
       </main>
     </div>
