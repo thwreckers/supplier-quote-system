@@ -236,7 +236,8 @@ export default function SuppliersPage() {
       }
     }
 
-    // Also find fuzzy matches (>70% similarity or if one name starts with the other)
+    // Find fuzzy matches (>80% similarity)
+    // Only if the base names (first 2-3 words) are very similar
     for (const supplier1 of allSuppliers) {
       if (supplier1.merged_into_id) continue
       for (const supplier2 of allSuppliers) {
@@ -244,14 +245,10 @@ export default function SuppliersPage() {
         const name1 = normalizeName(supplier1.name)
         const name2 = normalizeName(supplier2.name)
 
-        // Check similarity
+        // Only match if similarity is very high (>80%)
         const similarity = stringSimilarity(name1, name2)
 
-        // Check if one name starts with the other (e.g., "Ahmadi Auto" vs "Ahmadi Auto Parts")
-        const isSubstring = name1.startsWith(name2.split(' ')[0] + ' ') ||
-                           name2.startsWith(name1.split(' ')[0] + ' ')
-
-        if ((similarity > 0.7 && similarity < 1.0) || (isSubstring && similarity > 0.65)) {
+        if (similarity > 0.8 && similarity < 1.0) {
           // Check if not already in grouped
           const key = `${supplier1.id}-${supplier2.id}`
           if (!seen.has(key)) {
