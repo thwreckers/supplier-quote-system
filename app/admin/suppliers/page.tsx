@@ -252,12 +252,23 @@ export default function SuppliersPage() {
   }
 
   async function bulkDelete() {
+    console.log('=== BULK DELETE START ===')
+    console.log('selectedSuppliers:', selectedSuppliers)
+
     if (selectedSuppliers.size === 0) {
       alert('Please select suppliers to delete')
       return
     }
 
-    const selectedList = paginatedSuppliers.filter(s => selectedSuppliers.has(s.supplier.id))
+    console.log('paginatedSuppliers count:', paginatedSuppliers.length)
+    const selectedList = paginatedSuppliers.filter(s => {
+      const has = selectedSuppliers.has(s.supplier.id)
+      console.log(`Checking ${s.supplier.name} (${s.supplier.id}): ${has}`)
+      return has
+    })
+    console.log('selectedList count:', selectedList.length)
+    console.log('selectedList:', selectedList.map(s => ({ id: s.supplier.id, name: s.supplier.name })))
+
     const names = selectedList.map(s => `"${s.supplier.name}"`).join(', ')
 
     if (!window.confirm(
@@ -271,32 +282,34 @@ export default function SuppliersPage() {
       const db = getSupabase()
 
       for (const stat of selectedList) {
-        console.log(`Soft-deleting supplier: ${stat.supplier.id}`)
+        console.log(`Processing supplier: ${stat.supplier.id} (${stat.supplier.name})`)
 
-        // Just mark supplier as deleted (don't try to unlink quotes, may have NOT NULL constraint)
-        console.log(`Marking supplier as deleted: ${stat.supplier.id}`)
-        const { error: deleteError } = await db
+        // Just mark supplier as deleted
+        console.log(`About to update with: merged_into_id=${stat.supplier.id}, id=${stat.supplier.id}`)
+        const result = await db
           .from('suppliers')
           .update({ merged_into_id: stat.supplier.id })
           .eq('id', stat.supplier.id)
 
-        console.log('Delete result:', { error: deleteError })
+        console.log('Update result:', result)
 
-        if (deleteError) {
-          console.error(`Error marking supplier as deleted:`, deleteError)
-          alert(`Error: ${deleteError.message}`)
+        if (result.error) {
+          console.error(`Error:`, result.error)
+          alert(`Error: ${result.error.message}`)
           setIsProcessing(false)
           return
         }
+
+        console.log(`✓ Successfully marked ${stat.supplier.name} as deleted`)
       }
 
-      console.log('Delete completed successfully')
+      console.log('=== BULK DELETE SUCCESS ===')
       alert('Suppliers deleted successfully!')
       setSelectedSuppliers(new Set())
       setBulkAction(null)
-      fetchSuppliers()
+      await fetchSuppliers()
     } catch (error) {
-      console.error('Error deleting suppliers:', error)
+      console.error('=== BULK DELETE ERROR ===', error)
       alert(`Error: ${error instanceof Error ? error.message : 'Unknown error'}`)
     } finally {
       setIsProcessing(false)
