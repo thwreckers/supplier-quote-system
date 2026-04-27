@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import React, { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { getSupabase, type Supplier, type Quote } from '@/lib/supabase'
 
@@ -40,8 +40,8 @@ export default function SuppliersPage() {
   const [page, setPage] = useState(1)
   const SUPPLIERS_PER_PAGE = 10
 
-  // Edit modal state
-  const [editingSupplier, setEditingSupplier] = useState<Supplier | null>(null)
+  // Edit inline state
+  const [editingId, setEditingId] = useState<string | null>(null)
   const [editFormData, setEditFormData] = useState({
     name: '',
     company: '',
@@ -50,6 +50,7 @@ export default function SuppliersPage() {
     notes: '',
   })
   const [isSaving, setIsSaving] = useState(false)
+  const [saveMessage, setSaveMessage] = useState<string | null>(null)
 
   // Load dark mode preference from localStorage on mount
   useEffect(() => {
@@ -161,24 +162,23 @@ export default function SuppliersPage() {
     }
   }
 
-  function openEditModal(supplier: Supplier) {
-    setEditingSupplier(supplier)
-    setEditFormData({
-      name: supplier.name || '',
-      company: supplier.company || '',
-      email: supplier.email || '',
-      phone: supplier.phone || '',
-      notes: supplier.notes || '',
-    })
+  function toggleEditRow(supplier: Supplier) {
+    if (editingId === supplier.id) {
+      setEditingId(null)
+    } else {
+      setEditingId(supplier.id)
+      setEditFormData({
+        name: supplier.name || '',
+        company: supplier.company || '',
+        email: supplier.email || '',
+        phone: supplier.phone || '',
+        notes: supplier.notes || '',
+      })
+      setSaveMessage(null)
+    }
   }
 
-  function closeEditModal() {
-    setEditingSupplier(null)
-    setEditFormData({ name: '', company: '', email: '', phone: '', notes: '' })
-  }
-
-  async function saveSupplier() {
-    if (!editingSupplier) return
+  async function saveSupplier(supplierId: string) {
     if (!editFormData.name.trim()) {
       alert('Supplier name is required')
       return
@@ -197,13 +197,20 @@ export default function SuppliersPage() {
           notes: editFormData.notes || null,
           updated_at: new Date().toISOString(),
         })
-        .eq('id', editingSupplier.id)
+        .eq('id', supplierId)
 
-      closeEditModal()
-      fetchSuppliers()
+      setSaveMessage('✓ Saved successfully')
+      setTimeout(() => setSaveMessage(null), 2000)
+
+      // Update local state without full refresh
+      setSuppliers(suppliers.map(s =>
+        s.supplier.id === supplierId
+          ? { ...s, supplier: { ...s.supplier, ...editFormData } }
+          : s
+      ))
     } catch (error) {
       console.error('Error saving supplier:', error)
-      alert('Error saving supplier')
+      setSaveMessage('Error saving supplier')
     } finally {
       setIsSaving(false)
     }
@@ -286,31 +293,149 @@ export default function SuppliersPage() {
                 </thead>
                 <tbody>
                   {paginatedSuppliers.map((stat, idx) => (
-                    <tr key={stat.supplier.id} className={`border-b ${darkMode ? 'border-slate-700 hover:bg-slate-700' : 'border-gray-200 hover:bg-gray-50'} transition`}>
-                      <td className={`px-4 py-3 font-medium ${darkMode ? 'text-gray-100' : 'text-gray-900'}`}>{stat.supplier.name}</td>
-                      <td className={`px-4 py-3 ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>{stat.supplier.company || '—'}</td>
-                      <td className={`px-4 py-3 text-center font-medium ${darkMode ? 'text-gray-100' : 'text-gray-900'}`}>{stat.quoteCount}</td>
-                      <td className={`px-4 py-3 text-right font-medium ${darkMode ? 'text-gray-100' : 'text-gray-900'}`}>
-                        {stat.quoteCount > 0 ? `$${stat.avgPrice.toFixed(2)}` : '—'}
-                      </td>
-                      <td className={`px-4 py-3 text-sm ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
-                        {stat.lastQuoteDate ? new Date(stat.lastQuoteDate).toLocaleDateString() : '—'}
-                      </td>
-                      <td className="px-4 py-3 text-center space-x-2 flex justify-center">
-                        <button
-                          onClick={() => openEditModal(stat.supplier)}
-                          className="text-xs text-blue-600 hover:text-blue-800 font-medium"
-                        >
-                          Edit
-                        </button>
-                        <button
-                          onClick={() => deleteSupplier(stat.supplier.id)}
-                          className="text-xs text-red-600 hover:text-red-800 font-medium"
-                        >
-                          Delete
-                        </button>
-                      </td>
-                    </tr>
+                    <React.Fragment key={stat.supplier.id}>
+                      <tr className={`border-b ${darkMode ? 'border-slate-700 hover:bg-slate-700' : 'border-gray-200 hover:bg-gray-50'} transition`}>
+                        <td className={`px-4 py-3 font-medium ${darkMode ? 'text-gray-100' : 'text-gray-900'}`}>{stat.supplier.name}</td>
+                        <td className={`px-4 py-3 ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>{stat.supplier.company || '—'}</td>
+                        <td className={`px-4 py-3 text-center font-medium ${darkMode ? 'text-gray-100' : 'text-gray-900'}`}>{stat.quoteCount}</td>
+                        <td className={`px-4 py-3 text-right font-medium ${darkMode ? 'text-gray-100' : 'text-gray-900'}`}>
+                          {stat.quoteCount > 0 ? `$${stat.avgPrice.toFixed(2)}` : '—'}
+                        </td>
+                        <td className={`px-4 py-3 text-sm ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
+                          {stat.lastQuoteDate ? new Date(stat.lastQuoteDate).toLocaleDateString() : '—'}
+                        </td>
+                        <td className="px-4 py-3 text-center space-x-2 flex justify-center">
+                          <button
+                            onClick={() => toggleEditRow(stat.supplier)}
+                            className={`text-xs font-medium ${editingId === stat.supplier.id ? 'text-orange-600 hover:text-orange-800' : 'text-blue-600 hover:text-blue-800'}`}
+                          >
+                            {editingId === stat.supplier.id ? 'Close' : 'Edit'}
+                          </button>
+                          <button
+                            onClick={() => deleteSupplier(stat.supplier.id)}
+                            className="text-xs text-red-600 hover:text-red-800 font-medium"
+                          >
+                            Delete
+                          </button>
+                        </td>
+                      </tr>
+
+                      {/* Inline Edit Form */}
+                      {editingId === stat.supplier.id && (
+                        <tr className={darkMode ? 'bg-slate-700' : 'bg-gray-50'}>
+                          <td colSpan={6} className="px-4 py-4">
+                            <div className={`p-4 rounded-lg border ${darkMode ? 'bg-slate-800 border-slate-600' : 'bg-white border-gray-200'}`}>
+                              <h3 className={`font-medium mb-4 ${darkMode ? 'text-gray-100' : 'text-gray-900'}`}>
+                                Edit Supplier Details
+                              </h3>
+
+                              <div className="grid grid-cols-2 gap-4">
+                                {/* Name */}
+                                <div className="col-span-2">
+                                  <label className={`block text-xs font-medium mb-1 ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
+                                    Name <span style={{ color: '#d32f2f' }}>*</span>
+                                  </label>
+                                  <input
+                                    type="text"
+                                    value={editFormData.name}
+                                    onChange={(e) => setEditFormData({ ...editFormData, name: e.target.value })}
+                                    className={`w-full px-3 py-2 border rounded text-sm focus:outline-none focus:ring-2 focus:ring-red-300 ${
+                                      darkMode ? 'bg-slate-700 border-slate-600 text-white' : 'border-gray-300'
+                                    }`}
+                                  />
+                                </div>
+
+                                {/* Company */}
+                                <div>
+                                  <label className={`block text-xs font-medium mb-1 ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
+                                    Company
+                                  </label>
+                                  <input
+                                    type="text"
+                                    value={editFormData.company}
+                                    onChange={(e) => setEditFormData({ ...editFormData, company: e.target.value })}
+                                    className={`w-full px-3 py-2 border rounded text-sm focus:outline-none focus:ring-2 focus:ring-red-300 ${
+                                      darkMode ? 'bg-slate-700 border-slate-600 text-white' : 'border-gray-300'
+                                    }`}
+                                  />
+                                </div>
+
+                                {/* Email */}
+                                <div>
+                                  <label className={`block text-xs font-medium mb-1 ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
+                                    Email
+                                  </label>
+                                  <input
+                                    type="email"
+                                    value={editFormData.email}
+                                    onChange={(e) => setEditFormData({ ...editFormData, email: e.target.value })}
+                                    className={`w-full px-3 py-2 border rounded text-sm focus:outline-none focus:ring-2 focus:ring-red-300 ${
+                                      darkMode ? 'bg-slate-700 border-slate-600 text-white' : 'border-gray-300'
+                                    }`}
+                                  />
+                                </div>
+
+                                {/* Phone */}
+                                <div>
+                                  <label className={`block text-xs font-medium mb-1 ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
+                                    Phone
+                                  </label>
+                                  <input
+                                    type="tel"
+                                    value={editFormData.phone}
+                                    onChange={(e) => setEditFormData({ ...editFormData, phone: e.target.value })}
+                                    className={`w-full px-3 py-2 border rounded text-sm focus:outline-none focus:ring-2 focus:ring-red-300 ${
+                                      darkMode ? 'bg-slate-700 border-slate-600 text-white' : 'border-gray-300'
+                                    }`}
+                                  />
+                                </div>
+
+                                {/* Notes */}
+                                <div className="col-span-2">
+                                  <label className={`block text-xs font-medium mb-1 ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
+                                    Notes
+                                  </label>
+                                  <textarea
+                                    value={editFormData.notes}
+                                    onChange={(e) => setEditFormData({ ...editFormData, notes: e.target.value })}
+                                    rows={2}
+                                    className={`w-full px-3 py-2 border rounded text-sm focus:outline-none focus:ring-2 focus:ring-red-300 ${
+                                      darkMode ? 'bg-slate-700 border-slate-600 text-white' : 'border-gray-300'
+                                    }`}
+                                  />
+                                </div>
+                              </div>
+
+                              {/* Buttons & Message */}
+                              <div className="flex gap-2 mt-4 items-center">
+                                <button
+                                  onClick={() => saveSupplier(stat.supplier.id)}
+                                  disabled={isSaving}
+                                  style={{ backgroundColor: '#d32f2f' }}
+                                  className="text-white px-4 py-2 rounded font-medium text-sm hover:opacity-90 disabled:opacity-50"
+                                >
+                                  {isSaving ? 'Saving...' : 'Save'}
+                                </button>
+                                <button
+                                  onClick={() => toggleEditRow(stat.supplier)}
+                                  disabled={isSaving}
+                                  className={`px-4 py-2 rounded font-medium text-sm ${
+                                    darkMode ? 'bg-slate-700 text-white hover:bg-slate-600' : 'bg-gray-300 text-gray-900 hover:bg-gray-400'
+                                  } disabled:opacity-50`}
+                                >
+                                  Close
+                                </button>
+                                {saveMessage && (
+                                  <span className={`text-sm font-medium ${saveMessage.includes('✓') ? 'text-green-600' : 'text-red-600'}`}>
+                                    {saveMessage}
+                                  </span>
+                                )}
+                              </div>
+                            </div>
+                          </td>
+                        </tr>
+                      )}
+                    </React.Fragment>
                   ))}
                 </tbody>
               </table>
@@ -351,115 +476,6 @@ export default function SuppliersPage() {
           </>
         )}
       </main>
-
-      {/* Edit Modal */}
-      {editingSupplier && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className={`rounded-lg shadow-xl max-w-md w-full p-6 ${darkMode ? 'bg-slate-800' : 'bg-white'}`}>
-            <h2 className={`text-lg font-bold mb-4 ${darkMode ? 'text-gray-100' : 'text-gray-900'}`}>
-              Edit Supplier
-            </h2>
-
-            <div className="space-y-4">
-              {/* Name */}
-              <div>
-                <label className={`block text-sm font-medium mb-1 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
-                  Name <span style={{ color: '#d32f2f' }}>*</span>
-                </label>
-                <input
-                  type="text"
-                  value={editFormData.name}
-                  onChange={(e) => setEditFormData({ ...editFormData, name: e.target.value })}
-                  className={`w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-red-300 ${
-                    darkMode ? 'bg-slate-700 border-slate-600 text-white' : 'border-gray-300'
-                  }`}
-                />
-              </div>
-
-              {/* Company */}
-              <div>
-                <label className={`block text-sm font-medium mb-1 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
-                  Company
-                </label>
-                <input
-                  type="text"
-                  value={editFormData.company}
-                  onChange={(e) => setEditFormData({ ...editFormData, company: e.target.value })}
-                  className={`w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-red-300 ${
-                    darkMode ? 'bg-slate-700 border-slate-600 text-white' : 'border-gray-300'
-                  }`}
-                />
-              </div>
-
-              {/* Email */}
-              <div>
-                <label className={`block text-sm font-medium mb-1 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
-                  Email
-                </label>
-                <input
-                  type="email"
-                  value={editFormData.email}
-                  onChange={(e) => setEditFormData({ ...editFormData, email: e.target.value })}
-                  className={`w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-red-300 ${
-                    darkMode ? 'bg-slate-700 border-slate-600 text-white' : 'border-gray-300'
-                  }`}
-                />
-              </div>
-
-              {/* Phone */}
-              <div>
-                <label className={`block text-sm font-medium mb-1 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
-                  Phone
-                </label>
-                <input
-                  type="tel"
-                  value={editFormData.phone}
-                  onChange={(e) => setEditFormData({ ...editFormData, phone: e.target.value })}
-                  className={`w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-red-300 ${
-                    darkMode ? 'bg-slate-700 border-slate-600 text-white' : 'border-gray-300'
-                  }`}
-                />
-              </div>
-
-              {/* Notes */}
-              <div>
-                <label className={`block text-sm font-medium mb-1 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
-                  Notes
-                </label>
-                <textarea
-                  value={editFormData.notes}
-                  onChange={(e) => setEditFormData({ ...editFormData, notes: e.target.value })}
-                  rows={3}
-                  className={`w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-red-300 ${
-                    darkMode ? 'bg-slate-700 border-slate-600 text-white' : 'border-gray-300'
-                  }`}
-                />
-              </div>
-            </div>
-
-            {/* Buttons */}
-            <div className="flex gap-2 mt-6">
-              <button
-                onClick={saveSupplier}
-                disabled={isSaving}
-                style={{ backgroundColor: '#d32f2f' }}
-                className="flex-1 text-white py-2 rounded-lg font-medium hover:opacity-90 disabled:opacity-50"
-              >
-                {isSaving ? 'Saving...' : 'Save Changes'}
-              </button>
-              <button
-                onClick={closeEditModal}
-                disabled={isSaving}
-                className={`flex-1 py-2 rounded-lg font-medium ${
-                  darkMode ? 'bg-slate-700 text-white hover:bg-slate-600' : 'bg-gray-200 text-gray-900 hover:bg-gray-300'
-                } disabled:opacity-50`}
-              >
-                Cancel
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   )
 }
