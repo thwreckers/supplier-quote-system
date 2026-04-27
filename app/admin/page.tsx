@@ -1264,7 +1264,13 @@ export default function AdminPage() {
                               className={`text-xs font-medium px-2 py-0.5 rounded-full ${
                                 req.status === 'open'
                                   ? 'bg-green-100 text-green-700'
-                                  : 'bg-gray-100 text-gray-500'
+                                  : req.status === 'awarded'
+                                  ? 'bg-blue-100 text-blue-700'
+                                  : req.status === 'completed'
+                                  ? 'bg-purple-100 text-purple-700'
+                                  : req.status === 'archived'
+                                  ? 'bg-gray-100 text-gray-700'
+                                  : 'bg-red-100 text-red-700'
                               }`}
                             >
                               {req.status}

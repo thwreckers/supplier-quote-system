@@ -195,12 +195,11 @@ export default function AdminRequestDetail() {
     fetchData()
   }, [id])
 
-  async function toggleStatus() {
+  async function updateStatus(newStatus: string) {
     if (!request) return
     setTogglingStatus(true)
-    const newStatus = request.status === 'open' ? 'closed' : 'open'
     const { error } = await getSupabase().from('requests').update({ status: newStatus }).eq('id', id)
-    if (!error) setRequest({ ...request, status: newStatus })
+    if (!error) setRequest({ ...request, status: newStatus as typeof request.status })
     setTogglingStatus(false)
   }
 
@@ -808,14 +807,28 @@ export default function AdminRequestDetail() {
                   {refreshing ? 'Refreshing...' : '🔄 Refresh'}
                 </button>
 
-                <button
-                  onClick={toggleStatus}
+                <select
+                  value={request.status}
+                  onChange={(e) => updateStatus(e.target.value)}
                   disabled={togglingStatus}
-                  style={request.status === 'open' ? { backgroundColor: '#555' } : { backgroundColor: '#d32f2f' }}
-                  className="w-full text-white text-sm font-semibold px-4 py-2 rounded-lg hover:opacity-90 transition disabled:opacity-60 shadow-md"
+                  className={`w-full px-4 py-2 rounded-lg text-sm font-semibold text-white transition disabled:opacity-60 ${
+                    request.status === 'open'
+                      ? 'bg-green-600 hover:bg-green-700'
+                      : request.status === 'awarded'
+                      ? 'bg-blue-600 hover:bg-blue-700'
+                      : request.status === 'completed'
+                      ? 'bg-purple-600 hover:bg-purple-700'
+                      : request.status === 'archived'
+                      ? 'bg-gray-600 hover:bg-gray-700'
+                      : 'bg-red-600 hover:bg-red-700'
+                  }`}
                 >
-                  {request.status === 'open' ? 'Close Request' : 'Reopen Request'}
-                </button>
+                  <option value="open">Open</option>
+                  <option value="awarded">Awarded</option>
+                  <option value="completed">Completed</option>
+                  <option value="archived">Archived</option>
+                  <option value="closed">Closed</option>
+                </select>
               </div>
             </div>
 
