@@ -451,14 +451,7 @@ export default function SuppliersPage() {
                 style={{ backgroundColor: '#d32f2f' }}
                 className="text-white px-4 py-2 rounded text-sm font-medium hover:opacity-90 disabled:opacity-50"
               >
-                {isProcessing ? 'Processing...' : 'Merge'}
-              </button>
-              <button
-                onClick={bulkDelete}
-                disabled={isProcessing}
-                className="text-white bg-red-700 px-4 py-2 rounded text-sm font-medium hover:bg-red-800 disabled:opacity-50"
-              >
-                {isProcessing ? 'Processing...' : 'Delete'}
+                {isProcessing ? 'Processing...' : 'Merge Selected'}
               </button>
               <button
                 onClick={() => setSelectedSuppliers(new Set())}
