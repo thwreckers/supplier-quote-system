@@ -256,27 +256,27 @@ export default function SuppliersPage() {
 
   async function bulkDelete() {
     console.log('=== BULK DELETE START ===')
-    console.log('selectedSuppliers:', selectedSuppliers)
 
     if (selectedSuppliers.size === 0) {
       alert('Please select suppliers to delete')
       return
     }
 
-    console.log('paginatedSuppliers count:', paginatedSuppliers.length)
-    const selectedList = paginatedSuppliers.filter(s => {
-      const has = selectedSuppliers.has(s.supplier.id)
-      console.log(`Checking ${s.supplier.name} (${s.supplier.id}): ${has}`)
-      return has
-    })
-    console.log('selectedList count:', selectedList.length)
-    console.log('selectedList:', selectedList.map(s => ({ id: s.supplier.id, name: s.supplier.name })))
+    const selectedList = paginatedSuppliers.filter(s => selectedSuppliers.has(s.supplier.id))
 
-    const names = selectedList.map(s => `"${s.supplier.name}"`).join(', ')
+    // Check if any have quotes
+    const withQuotes = selectedList.filter(s => s.quoteCount > 0)
+    const withoutQuotes = selectedList.filter(s => s.quoteCount === 0)
 
-    if (!window.confirm(
-      `Delete ${selectedList.length} supplier(s): ${names}?\n\nTheir quotes will be unlinked.`
-    )) {
+    if (withQuotes.length > 0) {
+      const names = withQuotes.map(s => `"${s.supplier.name}"`).join(', ')
+      alert(`Cannot delete ${names} - they have quotes.\n\nMerge them instead to consolidate.`)
+      return
+    }
+
+    const names = withoutQuotes.map(s => `"${s.supplier.name}"`).join(', ')
+
+    if (!window.confirm(`Delete ${withoutQuotes.length} supplier(s): ${names}?`)) {
       return
     }
 
@@ -284,32 +284,27 @@ export default function SuppliersPage() {
     try {
       const db = getSupabase()
 
-      for (const stat of selectedList) {
-        console.log(`Processing supplier: ${stat.supplier.id} (${stat.supplier.name})`)
+      for (const stat of withoutQuotes) {
+        console.log(`Deleting supplier: ${stat.supplier.id} (${stat.supplier.name})`)
 
-        // Just mark supplier as deleted
-        console.log(`About to update with: merged_into_id=${stat.supplier.id}, id=${stat.supplier.id}`)
-        const result = await db
+        const { error } = await db
           .from('suppliers')
-          .update({ merged_into_id: stat.supplier.id })
+          .delete()
           .eq('id', stat.supplier.id)
 
-        console.log('Update result:', result)
-
-        if (result.error) {
-          console.error(`Error:`, result.error)
-          alert(`Error: ${result.error.message}`)
+        if (error) {
+          console.error(`Error deleting ${stat.supplier.name}:`, error)
+          alert(`Error: ${error.message}`)
           setIsProcessing(false)
           return
         }
 
-        console.log(`✓ Successfully marked ${stat.supplier.name} as deleted`)
+        console.log(`✓ Deleted ${stat.supplier.name}`)
       }
 
       console.log('=== BULK DELETE SUCCESS ===')
       alert('Suppliers deleted successfully!')
       setSelectedSuppliers(new Set())
-      setBulkAction(null)
       await fetchSuppliers()
     } catch (error) {
       console.error('=== BULK DELETE ERROR ===', error)
@@ -452,6 +447,13 @@ export default function SuppliersPage() {
                 className="text-white px-4 py-2 rounded text-sm font-medium hover:opacity-90 disabled:opacity-50"
               >
                 {isProcessing ? 'Processing...' : 'Merge Selected'}
+              </button>
+              <button
+                onClick={bulkDelete}
+                disabled={isProcessing}
+                className="text-white bg-red-700 px-4 py-2 rounded text-sm font-medium hover:bg-red-800 disabled:opacity-50"
+              >
+                {isProcessing ? 'Processing...' : 'Delete Selected'}
               </button>
               <button
                 onClick={() => setSelectedSuppliers(new Set())}
