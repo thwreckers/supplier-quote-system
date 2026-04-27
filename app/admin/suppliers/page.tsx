@@ -289,14 +289,16 @@ export default function SuppliersPage() {
 
         // Delete supplier
         console.log(`Deleting supplier record: ${stat.supplier.id}`)
-        const { error: deleteError } = await db
+        const deleteResult = await db
           .from('suppliers')
           .delete()
           .eq('id', stat.supplier.id)
 
-        if (deleteError) {
-          console.error(`Error deleting supplier:`, deleteError)
-          alert(`Error deleting supplier: ${deleteError.message}`)
+        console.log('Delete result:', deleteResult)
+
+        if (deleteResult.error) {
+          console.error(`Error deleting supplier:`, deleteResult.error)
+          alert(`Error deleting supplier: ${deleteResult.error.message}`)
           setIsProcessing(false)
           return
         }
