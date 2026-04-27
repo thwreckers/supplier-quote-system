@@ -39,7 +39,6 @@ export default function SuppliersPage() {
   const [darkMode, setDarkMode] = useState(false)
   const [page, setPage] = useState(1)
   const SUPPLIERS_PER_PAGE = 10
-  const [backfilling, setBackfilling] = useState(false)
 
   // Load dark mode preference from localStorage on mount
   useEffect(() => {
@@ -97,80 +96,20 @@ export default function SuppliersPage() {
     setLoading(false)
   }
 
-  async function backfillSuppliers() {
-    setBackfilling(true)
+  async function deleteSupplier(supplierId: string) {
+    if (!confirm('Delete this supplier? Their quotes will be unlinked.')) return
+
     try {
       const db = getSupabase()
-
-      // Get all quotes with supplier_name but no supplier_id
-      const { data: quotesWithoutSupplier } = await db
-        .from('quotes')
-        .select('supplier_name, id')
-        .is('supplier_id', null)
-
-      if (!quotesWithoutSupplier || quotesWithoutSupplier.length === 0) {
-        // Check if there are ANY quotes at all
-        const { data: allQuotes } = await db.from('quotes').select('count')
-        const totalQuotes = allQuotes ? Object.keys(allQuotes).length : 0
-
-        alert(`No unlinked quotes found.\n\nTotal quotes in system: ${totalQuotes}\n\nSuppliers are created when quotes are submitted through the supplier form.`)
-        setBackfilling(false)
-        return
-      }
-
-      // Get unique supplier names
-      const uniqueNames = [...new Set(quotesWithoutSupplier.map(q => q.supplier_name).filter(Boolean))]
-
-      // Get existing suppliers
-      const { data: existingSuppliers } = await db
-        .from('suppliers')
-        .select('name, id')
-
-      const existingNames = new Set(existingSuppliers?.map(s => s.name) || [])
-
-      let created = 0
-      let linked = 0
-
-      // Create new suppliers and link quotes
-      for (const name of uniqueNames) {
-        if (existingNames.has(name)) {
-          // Supplier exists, link quotes
-          const supplierId = existingSuppliers?.find(s => s.name === name)?.id
-          if (supplierId) {
-            await db
-              .from('quotes')
-              .update({ supplier_id: supplierId })
-              .eq('supplier_name', name)
-              .is('supplier_id', null)
-            linked += quotesWithoutSupplier.filter(q => q.supplier_name === name).length
-          }
-        } else {
-          // Create new supplier
-          const { data: newSupplier } = await db
-            .from('suppliers')
-            .insert({ name })
-            .select('id')
-            .single()
-
-          if (newSupplier?.id) {
-            await db
-              .from('quotes')
-              .update({ supplier_id: newSupplier.id })
-              .eq('supplier_name', name)
-              .is('supplier_id', null)
-            created++
-            linked += quotesWithoutSupplier.filter(q => q.supplier_name === name).length
-          }
-        }
-      }
-
-      alert(`✓ Backfill complete!\n${created} new suppliers created\n${linked} quotes linked`)
+      // Unlink quotes
+      await db.from('quotes').update({ supplier_id: null }).eq('supplier_id', supplierId)
+      // Delete supplier
+      await db.from('suppliers').delete().eq('id', supplierId)
       fetchSuppliers()
     } catch (error) {
-      console.error('Error backfilling suppliers:', error)
-      alert('Error backfilling suppliers')
+      console.error('Error deleting supplier:', error)
+      alert('Error deleting supplier')
     }
-    setBackfilling(false)
   }
 
   const filteredSuppliers = suppliers.filter(s =>
@@ -223,13 +162,6 @@ export default function SuppliersPage() {
               darkMode ? 'bg-slate-800 border-slate-700 text-white' : 'border-gray-300'
             }`}
           />
-          <button
-            onClick={backfillSuppliers}
-            disabled={backfilling}
-            className="mt-3 w-full px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 disabled:opacity-60 transition"
-          >
-            {backfilling ? 'Importing...' : '📥 Import Existing Suppliers from Quotes'}
-          </button>
         </div>
 
         {/* Suppliers Table */}
@@ -267,13 +199,19 @@ export default function SuppliersPage() {
                       <td className={`px-4 py-3 text-sm ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
                         {stat.lastQuoteDate ? new Date(stat.lastQuoteDate).toLocaleDateString() : '—'}
                       </td>
-                      <td className="px-4 py-3 text-center">
+                      <td className="px-4 py-3 text-center space-x-2 flex justify-center">
                         <Link
                           href={`/admin/suppliers/${stat.supplier.id}`}
                           className="text-xs text-blue-600 hover:text-blue-800 font-medium"
                         >
-                          View
+                          Edit
                         </Link>
+                        <button
+                          onClick={() => deleteSupplier(stat.supplier.id)}
+                          className="text-xs text-red-600 hover:text-red-800 font-medium"
+                        >
+                          Delete
+                        </button>
                       </td>
                     </tr>
                   ))}
