@@ -775,25 +775,23 @@ export default function AdminRequestDetail() {
               <div />
 
               <div className="flex flex-col gap-2 items-end">
-                <div className="flex gap-2 items-center">
-                  <button
-                    onClick={copyLink}
-                    disabled={generatingToken}
-                    style={{ backgroundColor: '#d32f2f' }}
-                    className="text-sm text-white font-semibold rounded-lg px-4 py-2 hover:opacity-90 transition disabled:opacity-60 shadow-md"
-                  >
-                    {generatingToken ? 'Generating...' : copied ? '✓ Copied!' : '📋 Copy Share Link'}
-                  </button>
+                <button
+                  onClick={copyLink}
+                  disabled={generatingToken}
+                  style={{ backgroundColor: '#d32f2f' }}
+                  className="text-sm text-white font-semibold rounded-lg px-4 py-2 hover:opacity-90 transition disabled:opacity-60 shadow-md"
+                >
+                  {generatingToken ? 'Generating...' : copied ? '✓ Copied!' : '📋 Copy Share Link'}
+                </button>
 
-                  <button
-                    onClick={handleRefresh}
-                    disabled={refreshing}
-                    className="text-sm border border-gray-300 rounded-lg px-3 py-2 hover:bg-gray-50 transition text-gray-700 disabled:opacity-60"
-                    title="Refresh quotes and responses"
-                  >
-                    {refreshing ? 'Refreshing...' : '🔄 Refresh'}
-                  </button>
-                </div>
+                <button
+                  onClick={handleRefresh}
+                  disabled={refreshing}
+                  className="text-sm border border-gray-300 rounded-lg px-3 py-2 hover:bg-gray-50 transition text-gray-700 disabled:opacity-60"
+                  title="Refresh quotes and responses"
+                >
+                  {refreshing ? 'Refreshing...' : '🔄 Refresh'}
+                </button>
 
                 <div className="flex items-center gap-2">
                   <button
