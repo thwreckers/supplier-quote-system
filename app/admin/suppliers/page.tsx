@@ -79,55 +79,28 @@ export default function SuppliersPage() {
     const db = getSupabase()
 
     try {
-      // Get all quotes to see who has submitted
-      const { data: allQuotes } = await db
-        .from('quotes')
-        .select('supplier_id, supplier_name, price, created_at')
+      // Get all suppliers
+      const { data: suppliersData, error: suppliersError } = await db
+        .from('suppliers')
+        .select('*')
+        .order('name', { ascending: true })
 
-      if (!allQuotes) {
-        setSuppliers([])
+      if (suppliersError) {
+        console.error('Error fetching suppliers:', suppliersError)
         setLoading(false)
         return
       }
 
-      // Get unique supplier_name values from quotes
-      const uniqueSupplierNames = [...new Set(allQuotes
-        .map(q => q.supplier_name)
-        .filter(Boolean)
-      )]
+      // Get all quotes for stats calculation
+      const { data: allQuotes } = await db
+        .from('quotes')
+        .select('supplier_id, price, created_at')
 
-      // Get existing suppliers
-      const { data: existingSuppliers } = await db
-        .from('suppliers')
-        .select('*')
-        .order('name', { ascending: true })
-
-      const existingSupplierMap = new Map((existingSuppliers || []).map(s => [s.name, s]))
-      const suppliersToCreate = uniqueSupplierNames.filter(name => !existingSupplierMap.has(name))
-
-      // Create missing suppliers from quote history
-      for (const name of suppliersToCreate) {
-        const { data: newSupplier } = await db
-          .from('suppliers')
-          .insert({ name })
-          .select('*')
-          .single()
-
-        if (newSupplier) {
-          existingSupplierMap.set(newSupplier.name, newSupplier)
-        }
-      }
-
-      // Fetch updated suppliers list
-      const { data: suppliersData } = await db
-        .from('suppliers')
-        .select('*')
-        .order('name', { ascending: true })
+      const quotes = allQuotes || []
 
       if (suppliersData) {
-        // Calculate stats for each supplier from quotes
         const stats: SupplierStats[] = suppliersData.map(supplier => {
-          const supplierQuotes = allQuotes.filter(q => q.supplier_id === supplier.id) || []
+          const supplierQuotes = quotes.filter(q => q.supplier_id === supplier.id)
           const avgPrice = supplierQuotes.length > 0
             ? supplierQuotes.reduce((sum, q) => sum + q.price, 0) / supplierQuotes.length
             : 0
