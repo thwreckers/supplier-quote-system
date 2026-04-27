@@ -109,7 +109,11 @@ export default function SuppliersPage() {
         .is('supplier_id', null)
 
       if (!quotesWithoutSupplier || quotesWithoutSupplier.length === 0) {
-        alert('No unlinked quotes found')
+        // Check if there are ANY quotes at all
+        const { data: allQuotes } = await db.from('quotes').select('count')
+        const totalQuotes = allQuotes ? Object.keys(allQuotes).length : 0
+
+        alert(`No unlinked quotes found.\n\nTotal quotes in system: ${totalQuotes}\n\nSuppliers are created when quotes are submitted through the supplier form.`)
         setBackfilling(false)
         return
       }
