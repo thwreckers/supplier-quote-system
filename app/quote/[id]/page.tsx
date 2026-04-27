@@ -239,29 +239,36 @@ export default function SupplierQuotePage() {
     // Auto-capture supplier: check if supplier exists, create if not
     let supplierId: string | null = null
     try {
-      const { data: existingSupplier } = await getSupabase()
+      const { data: existingSupplier, error: lookupError } = await getSupabase()
         .from('suppliers')
         .select('id')
         .eq('name', supplierName)
         .maybeSingle()
 
-      if (existingSupplier) {
+      if (lookupError) {
+        console.error('Error looking up supplier:', lookupError)
+      } else if (existingSupplier) {
+        console.log('Found existing supplier:', existingSupplier.id)
         supplierId = existingSupplier.id
       } else {
         // Create new supplier
+        console.log('Creating new supplier:', supplierName)
         const { data: newSupplier, error: supplierError } = await getSupabase()
           .from('suppliers')
           .insert({ name: supplierName })
           .select('id')
           .single()
 
-        if (!supplierError && newSupplier) {
+        if (supplierError) {
+          console.error('Error creating supplier:', supplierError)
+        } else if (newSupplier) {
+          console.log('Created new supplier:', newSupplier.id)
           supplierId = newSupplier.id
         }
       }
     } catch (error) {
       // Supplier lookup failed, continue without supplier_id
-      console.error('Error capturing supplier:', error)
+      console.error('Error capturing supplier (exception):', error)
     }
 
     const { data: newQuote, error: insertError } = await getSupabase()
