@@ -126,6 +126,17 @@ export default function AdminRequestDetail() {
   // Dark mode state with localStorage persistence
   const [darkMode, setDarkMode] = useState(false)
 
+  // Edit request state
+  const [isEditing, setIsEditing] = useState(false)
+  const [editTitle, setEditTitle] = useState('')
+  const [editDescription, setEditDescription] = useState('')
+  const [editParts, setEditParts] = useState<string[]>([])
+  const [editQuantities, setEditQuantities] = useState<number[]>([])
+  const [editCustomerId, setEditCustomerId] = useState<string | null>(null)
+  const [editCustomerDetails, setEditCustomerDetails] = useState<any>(null)
+  const [editExpiresAt, setEditExpiresAt] = useState('')
+  const [savingEdit, setSavingEdit] = useState(false)
+
   // Load dark mode preference from localStorage on mount
   useEffect(() => {
     const savedDarkMode = localStorage.getItem('darkMode')
@@ -330,6 +341,86 @@ export default function AdminRequestDetail() {
       setExpiryTime('17:00')
     }
     setEditingExpiry(true)
+  }
+
+  function startEditRequest() {
+    if (!request) return
+    setEditTitle(request.title)
+    setEditDescription(request.description || '')
+    setEditParts(request.parts || [])
+    setEditQuantities(request.quantities || [])
+    setEditCustomerId(request.customer_id)
+
+    // Parse customer_details if it exists
+    if (request.customer_details) {
+      try {
+        setEditCustomerDetails(JSON.parse(request.customer_details))
+      } catch {
+        setEditCustomerDetails(request.customer_details)
+      }
+    } else {
+      setEditCustomerDetails(null)
+    }
+
+    setEditExpiresAt(request.expires_at ? request.expires_at.split('T')[0] : '')
+    setIsEditing(true)
+  }
+
+  async function saveRequestEdit() {
+    if (!request) return
+
+    setSavingEdit(true)
+    try {
+      const nonEmptyParts = editParts.filter(p => p.trim() !== '')
+      if (nonEmptyParts.length === 0) {
+        alert('Please add at least one part')
+        setSavingEdit(false)
+        return
+      }
+
+      const nonEmptyQuantities = editQuantities.slice(0, nonEmptyParts.length)
+
+      const updateData: any = {
+        title: editTitle,
+        description: editDescription,
+        parts: nonEmptyParts,
+        quantities: nonEmptyQuantities,
+        customer_id: editCustomerId,
+        customer_details: editCustomerDetails ? JSON.stringify(editCustomerDetails) : null,
+      }
+
+      if (editExpiresAt) {
+        updateData.expires_at = `${editExpiresAt}T17:00:00`
+      }
+
+      const { error } = await getSupabase()
+        .from('requests')
+        .update(updateData)
+        .eq('id', id)
+
+      if (error) {
+        alert('Error saving changes: ' + error.message)
+      } else {
+        // Update local state
+        setRequest({
+          ...request,
+          title: editTitle,
+          description: editDescription,
+          parts: nonEmptyParts,
+          quantities: nonEmptyQuantities,
+          customer_id: editCustomerId,
+          customer_details: editCustomerDetails ? JSON.stringify(editCustomerDetails) : null,
+          expires_at: editExpiresAt ? `${editExpiresAt}T17:00:00` : request.expires_at,
+        })
+        setIsEditing(false)
+      }
+    } finally {
+      setSavingEdit(false)
+    }
+  }
+
+  function cancelEditRequest() {
+    setIsEditing(false)
   }
 
   function isExpired() {
@@ -801,6 +892,14 @@ export default function AdminRequestDetail() {
 
               <div className="flex flex-col gap-2 items-end w-48">
                 <button
+                  onClick={() => startEditRequest()}
+                  style={{ backgroundColor: '#f59e0b' }}
+                  className="w-full text-sm text-white font-semibold rounded-lg px-4 py-2 hover:opacity-90 transition disabled:opacity-60 shadow-md"
+                >
+                  ✏️ Edit Request
+                </button>
+
+                <button
                   onClick={copyLink}
                   disabled={generatingToken}
                   style={{ backgroundColor: '#d32f2f' }}
@@ -885,6 +984,124 @@ export default function AdminRequestDetail() {
             </div>
           </div>
         </div>
+
+        {/* Edit Request Form */}
+        {isEditing && (
+          <div className={`rounded-lg border p-6 mb-6 shadow-sm ${darkMode ? 'bg-slate-800 border-slate-700' : 'bg-white border-gray-200'}`}>
+            <h2 className={`text-lg font-bold mb-4 ${darkMode ? 'text-gray-100' : 'text-gray-900'}`}>Edit Request</h2>
+
+            <div className="space-y-4">
+              {/* Title */}
+              <div>
+                <label className={`block text-sm font-medium mb-1 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>Title</label>
+                <input
+                  type="text"
+                  value={editTitle}
+                  onChange={(e) => setEditTitle(e.target.value)}
+                  className="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-amber-300"
+                />
+              </div>
+
+              {/* Description */}
+              <div>
+                <label className={`block text-sm font-medium mb-1 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>Description (optional)</label>
+                <textarea
+                  value={editDescription}
+                  onChange={(e) => setEditDescription(e.target.value)}
+                  rows={2}
+                  className="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-amber-300 resize-none"
+                />
+              </div>
+
+              {/* Parts and Quantities */}
+              <div>
+                <label className={`block text-sm font-medium mb-2 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>Parts</label>
+                <div className={`overflow-x-auto border rounded-lg ${darkMode ? 'border-slate-700' : 'border-gray-300'}`}>
+                  <table className="w-full">
+                    <thead>
+                      <tr className={`border-b ${darkMode ? 'bg-slate-700 border-slate-600' : 'bg-gray-50 border-gray-300'}`}>
+                        <th className={`text-left px-3 py-2 text-xs font-medium w-3/4 ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>Part</th>
+                        <th className={`text-left px-3 py-2 text-xs font-medium w-1/4 ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>Qty</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {editParts.map((part, idx) => (
+                        <tr key={idx} className={idx !== editParts.length - 1 ? `border-b ${darkMode ? 'border-slate-600' : 'border-gray-300'}` : ''}>
+                          <td className="p-2">
+                            <input
+                              type="text"
+                              placeholder={`Part ${idx + 1}`}
+                              value={part}
+                              onChange={e => {
+                                const newParts = [...editParts]
+                                newParts[idx] = e.target.value
+                                setEditParts(newParts)
+                              }}
+                              className="w-full border border-gray-300 rounded px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-amber-300"
+                            />
+                          </td>
+                          <td className="p-2">
+                            <input
+                              type="number"
+                              min="1"
+                              value={editQuantities[idx] || 1}
+                              onChange={e => {
+                                const newQtys = [...editQuantities]
+                                newQtys[idx] = Math.max(1, parseInt(e.target.value) || 1)
+                                setEditQuantities(newQtys)
+                              }}
+                              className="w-full border border-gray-300 rounded px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-amber-300"
+                            />
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setEditParts([...editParts, ''])
+                    setEditQuantities([...editQuantities, 1])
+                  }}
+                  className="mt-2 text-xs text-blue-600 hover:text-blue-800 font-medium"
+                >
+                  + Add Row
+                </button>
+              </div>
+
+              {/* Expiry Date */}
+              <div>
+                <label className={`block text-sm font-medium mb-1 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>Expiry Date (optional)</label>
+                <input
+                  type="date"
+                  value={editExpiresAt}
+                  onChange={(e) => setEditExpiresAt(e.target.value)}
+                  className="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-amber-300"
+                />
+              </div>
+
+              {/* Action Buttons */}
+              <div className="flex gap-2 pt-2">
+                <button
+                  onClick={saveRequestEdit}
+                  disabled={savingEdit}
+                  style={{ backgroundColor: '#10b981' }}
+                  className="flex-1 text-white text-sm font-medium px-4 py-2 rounded-lg hover:opacity-90 transition disabled:opacity-60"
+                >
+                  {savingEdit ? 'Saving...' : '✓ Save Changes'}
+                </button>
+                <button
+                  onClick={cancelEditRequest}
+                  disabled={savingEdit}
+                  className="flex-1 border border-gray-300 text-gray-700 text-sm font-medium px-4 py-2 rounded-lg hover:bg-gray-50 transition disabled:opacity-60"
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Response tracking */}
         <div className="bg-white rounded-lg border border-gray-200 p-4 mb-6 shadow-sm">
